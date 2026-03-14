@@ -1,6 +1,6 @@
 {
   "name": "react-native-pose-landmarks",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "react-native-pose-landmarks is a react native package built with Nitro",
   "main": "./lib/commonjs/index.js",
   "module": "./lib/module/index.js",
@@ -42,11 +42,11 @@
   "workspaces": [
     "example"
   ],
-  "repository": "https://github.com/tonygeorge/react-native-pose-landmarks.git",
+  "repository": "https://github.com/tony-div/workout-hacker-native-modules.git",
   "author": "Tony George",
   "license": "MIT",
-  "bugs": "https://github.com/tonygeorge/react-native-pose-landmarks/issues",
-  "homepage": "https://github.com/tonygeorge/react-native-pose-landmarks#readme",
+  "bugs": "https://github.com/tony-div/workout-hacker-native-modules/issues",
+  "homepage": "https://github.com/tony-div/workout-hacker-native-modules#readme",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
