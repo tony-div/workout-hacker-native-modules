@@ -1,0 +1,41 @@
+// Root-level build.gradle — IDE/IntelliSense build only.
+// Use example/android for actual app builds.
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.8.0'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.20'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url "https://www.jitpack.io" }
+    }
+
+    // React Native 0.71+ renamed the artifact from react-native → react-android.
+    // The React Native Gradle Plugin normally performs this substitution, but it
+    // only runs inside the example app context. Replicate it here so the library
+    // and NitroModules resolve their com.facebook.react:react-native:+ dependency.
+    configurations.all {
+        resolutionStrategy.dependencySubstitution {
+            substitute module('com.facebook.react:react-native') using module('com.facebook.react:react-android:0.84.1')
+        }
+    }
+}
+
+// Provide the ext properties that android/build.gradle reads via
+// getExtOrDefault() / getExtOrIntegerDefault() when rootProject.ext is absent.
+ext {
+    compileSdkVersion    = 34
+    minSdkVersion        = 23
+    targetSdkVersion     = 35
+    ndkVersion           = "27.1.12297006"
+    kotlinVersion        = "2.1.20"
+}

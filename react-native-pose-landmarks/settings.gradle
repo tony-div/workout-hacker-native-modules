@@ -1,0 +1,14 @@
+// Root-level settings.gradle — exists so the JetBrains Kotlin LSP
+// GradleWorkspaceImporter can discover and sync this project.
+// The example app (example/android) is the canonical build target;
+// this file is for IDE / IntelliSense purposes only.
+
+rootProject.name = 'react-native-pose-landmarks-dev'
+
+// Library module
+include ':poseLandmarks'
+project(':poseLandmarks').projectDir = new File(rootProject.projectDir, 'android')
+
+// NitroModules (required by the library)
+include ':react-native-nitro-modules'
+project(':react-native-nitro-modules').projectDir = new File(rootProject.projectDir, 'node_modules/react-native-nitro-modules/android')
