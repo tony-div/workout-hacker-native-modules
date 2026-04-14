@@ -30,9 +30,7 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 
 ## Release
 
-This package is released from GitHub Actions using semantic-release.
+This package is released from GitHub Actions when you push a version tag.
 
-- Push conventional commits to `main` to trigger a release.
-- Set repository secrets:
-  - `GITHUB_TOKEN`: provided automatically by GitHub Actions.
-- The release workflow will build and create a GitHub release.
+- Create and push a tag in the format `v*` (for example `v1.0.1`).
+- The release workflow creates a GitHub release automatically from that tag.
