@@ -42,18 +42,6 @@ module.exports = {
         },
       },
     ],
-    [
-      '@semantic-release/changelog',
-      {
-        changelogFile: 'CHANGELOG.md',
-      },
-    ],
     '@semantic-release/github',
-    [
-      '@semantic-release/git',
-      {
-        assets: ['package.json', 'CHANGELOG.md', 'example/package.json'],
-      },
-    ],
   ],
 }

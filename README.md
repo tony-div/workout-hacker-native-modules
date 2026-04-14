@@ -35,4 +35,4 @@ This package is released from GitHub Actions using semantic-release.
 - Push conventional commits to `main` to trigger a release.
 - Set repository secrets:
   - `GITHUB_TOKEN`: provided automatically by GitHub Actions.
-- The release workflow will build, create a GitHub release, and update `CHANGELOG.md`.
+- The release workflow will build and create a GitHub release.
