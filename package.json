@@ -42,11 +42,11 @@
   "workspaces": [
     "example"
   ],
-  "repository": "https://github.com/tony-div/workout-hacker-native-modules.git",
+  "repository": "https://github.com/tony-div/react-native-pose-landmarks.git",
   "author": "Tony George",
   "license": "MIT",
-  "bugs": "https://github.com/tony-div/workout-hacker-native-modules/issues",
-  "homepage": "https://github.com/tony-div/workout-hacker-native-modules#readme",
+  "bugs": "https://github.com/tony-div/react-native-pose-landmarks/issues",
+  "homepage": "https://github.com/tony-div/react-native-pose-landmarks#readme",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
