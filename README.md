@@ -27,3 +27,12 @@ Bootstrapped with [create-nitro-module](https://github.com/patrickkabwe/create-n
 ## Contributing
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+## Release
+
+This package is released from GitHub Actions using semantic-release.
+
+- Push conventional commits to `main` to trigger a release.
+- Set repository secrets:
+  - `GITHUB_TOKEN`: provided automatically by GitHub Actions.
+- The release workflow will build, create a GitHub release, and update `CHANGELOG.md`.
