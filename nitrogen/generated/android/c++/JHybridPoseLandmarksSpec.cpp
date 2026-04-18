@@ -13,37 +13,31 @@
 
 namespace margelo::nitro::poselandmarks {
 
-  jni::local_ref<JHybridPoseLandmarksSpec::jhybriddata> JHybridPoseLandmarksSpec::initHybrid(jni::alias_ref<jhybridobject> jThis) {
+  std::shared_ptr<JHybridPoseLandmarksSpec> JHybridPoseLandmarksSpec::JavaPart::getJHybridPoseLandmarksSpec() {
+    auto hybridObject = JHybridObject::JavaPart::getJHybridObject();
+    auto castHybridObject = std::dynamic_pointer_cast<JHybridPoseLandmarksSpec>(hybridObject);
+    if (castHybridObject == nullptr) [[unlikely]] {
+      throw std::runtime_error("Failed to downcast JHybridObject to JHybridPoseLandmarksSpec!");
+    }
+    return castHybridObject;
+  }
+
+  jni::local_ref<JHybridPoseLandmarksSpec::CxxPart::jhybriddata> JHybridPoseLandmarksSpec::CxxPart::initHybrid(jni::alias_ref<jhybridobject> jThis) {
     return makeCxxInstance(jThis);
   }
 
-  void JHybridPoseLandmarksSpec::registerNatives() {
-    registerHybrid({
-      makeNativeMethod("initHybrid", JHybridPoseLandmarksSpec::initHybrid),
-    });
-  }
-
-  size_t JHybridPoseLandmarksSpec::getExternalMemorySize() noexcept {
-    static const auto method = javaClassStatic()->getMethod<jlong()>("getMemorySize");
-    return method(_javaPart);
-  }
-
-  bool JHybridPoseLandmarksSpec::equals(const std::shared_ptr<HybridObject>& other) {
-    if (auto otherCast = std::dynamic_pointer_cast<JHybridPoseLandmarksSpec>(other)) {
-      return _javaPart == otherCast->_javaPart;
+  std::shared_ptr<JHybridObject> JHybridPoseLandmarksSpec::CxxPart::createHybridObject(const jni::local_ref<JHybridObject::JavaPart>& javaPart) {
+    auto castJavaPart = jni::dynamic_ref_cast<JHybridPoseLandmarksSpec::JavaPart>(javaPart);
+    if (castJavaPart == nullptr) [[unlikely]] {
+      throw std::runtime_error("Failed to cast JHybridObject::JavaPart to JHybridPoseLandmarksSpec::JavaPart!");
     }
-    return false;
+    return std::make_shared<JHybridPoseLandmarksSpec>(castJavaPart);
   }
 
-  void JHybridPoseLandmarksSpec::dispose() noexcept {
-    static const auto method = javaClassStatic()->getMethod<void()>("dispose");
-    method(_javaPart);
-  }
-
-  std::string JHybridPoseLandmarksSpec::toString() {
-    static const auto method = javaClassStatic()->getMethod<jni::JString()>("toString");
-    auto javaString = method(_javaPart);
-    return javaString->toStdString();
+  void JHybridPoseLandmarksSpec::CxxPart::registerNatives() {
+    registerHybrid({
+      makeNativeMethod("initHybrid", JHybridPoseLandmarksSpec::CxxPart::initHybrid),
+    });
   }
 
   // Properties
@@ -51,17 +45,17 @@ namespace margelo::nitro::poselandmarks {
 
   // Methods
   bool JHybridPoseLandmarksSpec::initPoseLandmarker() {
-    static const auto method = javaClassStatic()->getMethod<jboolean()>("initPoseLandmarker");
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean()>("initPoseLandmarker");
     auto __result = method(_javaPart);
     return static_cast<bool>(__result);
   }
   bool JHybridPoseLandmarksSpec::closePoseLandmarker() {
-    static const auto method = javaClassStatic()->getMethod<jboolean()>("closePoseLandmarker");
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean()>("closePoseLandmarker");
     auto __result = method(_javaPart);
     return static_cast<bool>(__result);
   }
   std::vector<double> JHybridPoseLandmarksSpec::getLandmarksBuffer() {
-    static const auto method = javaClassStatic()->getMethod<jni::local_ref<jni::JArrayDouble>()>("getLandmarksBuffer");
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JArrayDouble>()>("getLandmarksBuffer");
     auto __result = method(_javaPart);
     return [&]() {
       size_t __size = __result->size();
@@ -71,7 +65,7 @@ namespace margelo::nitro::poselandmarks {
     }();
   }
   double JHybridPoseLandmarksSpec::getLastInferenceTimeMs() {
-    static const auto method = javaClassStatic()->getMethod<double()>("getLastInferenceTimeMs");
+    static const auto method = _javaPart->javaClassStatic()->getMethod<double()>("getLastInferenceTimeMs");
     auto __result = method(_javaPart);
     return __result;
   }

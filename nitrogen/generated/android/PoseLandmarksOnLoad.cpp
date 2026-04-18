@@ -26,20 +26,27 @@ int initialize(JavaVM* vm) {
   });
 }
 
+struct JHybridPoseLandmarksSpecImpl: public jni::JavaClass<JHybridPoseLandmarksSpecImpl, JHybridPoseLandmarksSpec::JavaPart> {
+  static constexpr auto kJavaDescriptor = "Lcom/poselandmarks/HybridPoseLandmarks;";
+  static std::shared_ptr<JHybridPoseLandmarksSpec> create() {
+    static const auto constructorFn = javaClassStatic()->getConstructor<JHybridPoseLandmarksSpecImpl::javaobject()>();
+    jni::local_ref<JHybridPoseLandmarksSpec::JavaPart> javaPart = javaClassStatic()->newObject(constructorFn);
+    return javaPart->getJHybridPoseLandmarksSpec();
+  }
+};
+
 void registerAllNatives() {
   using namespace margelo::nitro;
   using namespace margelo::nitro::poselandmarks;
 
   // Register native JNI methods
-  margelo::nitro::poselandmarks::JHybridPoseLandmarksSpec::registerNatives();
+  margelo::nitro::poselandmarks::JHybridPoseLandmarksSpec::CxxPart::registerNatives();
 
   // Register Nitro Hybrid Objects
   HybridObjectRegistry::registerHybridObjectConstructor(
     "PoseLandmarks",
     []() -> std::shared_ptr<HybridObject> {
-      static DefaultConstructableObject<JHybridPoseLandmarksSpec::javaobject> object("com/margelo/nitro/poselandmarks/HybridPoseLandmarks");
-      auto instance = object.create();
-      return instance->cthis()->shared();
+      return JHybridPoseLandmarksSpecImpl::create();
     }
   );
 }

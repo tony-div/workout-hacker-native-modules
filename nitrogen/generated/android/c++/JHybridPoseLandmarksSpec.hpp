@@ -18,34 +18,33 @@ namespace margelo::nitro::poselandmarks {
 
   using namespace facebook;
 
-  class JHybridPoseLandmarksSpec: public jni::HybridClass<JHybridPoseLandmarksSpec, JHybridObject>,
-                                  public virtual HybridPoseLandmarksSpec {
+  class JHybridPoseLandmarksSpec: public virtual HybridPoseLandmarksSpec, public virtual JHybridObject {
   public:
-    static auto constexpr kJavaDescriptor = "Lcom/margelo/nitro/poselandmarks/HybridPoseLandmarksSpec;";
-    static jni::local_ref<jhybriddata> initHybrid(jni::alias_ref<jhybridobject> jThis);
-    static void registerNatives();
+    struct JavaPart: public jni::JavaClass<JavaPart, JHybridObject::JavaPart> {
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/poselandmarks/HybridPoseLandmarksSpec;";
+      std::shared_ptr<JHybridPoseLandmarksSpec> getJHybridPoseLandmarksSpec();
+    };
+    struct CxxPart: public jni::HybridClass<CxxPart, JHybridObject::CxxPart> {
+      static constexpr auto kJavaDescriptor = "Lcom/margelo/nitro/poselandmarks/HybridPoseLandmarksSpec$CxxPart;";
+      static jni::local_ref<jhybriddata> initHybrid(jni::alias_ref<jhybridobject> jThis);
+      static void registerNatives();
+      using HybridBase::HybridBase;
+    protected:
+      std::shared_ptr<JHybridObject> createHybridObject(const jni::local_ref<JHybridObject::JavaPart>& javaPart) override;
+    };
 
-  protected:
-    // C++ constructor (called from Java via `initHybrid()`)
-    explicit JHybridPoseLandmarksSpec(jni::alias_ref<jhybridobject> jThis) :
+  public:
+    explicit JHybridPoseLandmarksSpec(const jni::local_ref<JHybridPoseLandmarksSpec::JavaPart>& javaPart):
       HybridObject(HybridPoseLandmarksSpec::TAG),
-      HybridBase(jThis),
-      _javaPart(jni::make_global(jThis)) {}
-
-  public:
+      JHybridObject(javaPart),
+      _javaPart(jni::make_global(javaPart)) {}
     ~JHybridPoseLandmarksSpec() override {
       // Hermes GC can destroy JS objects on a non-JNI Thread.
       jni::ThreadScope::WithClassLoader([&] { _javaPart.reset(); });
     }
 
   public:
-    size_t getExternalMemorySize() noexcept override;
-    bool equals(const std::shared_ptr<HybridObject>& other) override;
-    void dispose() noexcept override;
-    std::string toString() override;
-
-  public:
-    inline const jni::global_ref<JHybridPoseLandmarksSpec::javaobject>& getJavaPart() const noexcept {
+    inline const jni::global_ref<JHybridPoseLandmarksSpec::JavaPart>& getJavaPart() const noexcept {
       return _javaPart;
     }
 
@@ -61,9 +60,7 @@ namespace margelo::nitro::poselandmarks {
     double getLastInferenceTimeMs() override;
 
   private:
-    friend HybridBase;
-    using HybridBase::HybridBase;
-    jni::global_ref<JHybridPoseLandmarksSpec::javaobject> _javaPart;
+    jni::global_ref<JHybridPoseLandmarksSpec::JavaPart> _javaPart;
   };
 
 } // namespace margelo::nitro::poselandmarks

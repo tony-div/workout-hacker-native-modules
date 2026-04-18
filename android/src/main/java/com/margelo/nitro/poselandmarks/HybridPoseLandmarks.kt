@@ -19,7 +19,7 @@ import java.util.concurrent.Executors
 
 @DoNotStrip
 @Keep
-class HybridPoseLandmarks : HybridPoseLandmarksSpec(), PoseLandmarkerHelper.LandmarkerListener {
+open class HybridPoseLandmarks : HybridPoseLandmarksSpec(), PoseLandmarkerHelper.LandmarkerListener {
     private var poseLandmarkerHelper: PoseLandmarkerHelper? = null
     private var latestLandmarks: DoubleArray = doubleArrayOf()
     private var lastInferenceTimeMs: Double = -1.0
@@ -166,4 +166,3 @@ class HybridPoseLandmarks : HybridPoseLandmarksSpec(), PoseLandmarkerHelper.Land
         }
     }
 }
-
