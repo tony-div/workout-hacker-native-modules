@@ -8,17 +8,24 @@ react-native-pose-landmarks is a react native package built with Nitro
 
 ## Requirements
 
-- React Native v0.76.0 or higher
-- Node 18.0.0 or higher
+- React Native v0.85.1 or higher
+- Node v20.19.4 or higher
+- `react-native-nitro-modules` v0.35.4 or higher
 
-> [!IMPORTANT]  
-> To Support `Nitro Views` you need to install React Native version v0.78.0 or higher.
+> [!IMPORTANT]
+> Nitro Views require React Native v0.78.0 or higher.
 
 ## Installation
 
 ```bash
 npm install react-native-pose-landmarks react-native-nitro-modules
 ```
+
+## Compatibility notes
+
+- This package is generated with Nitrogen v0.35.4.
+- Android includes an adapter class at `com.poselandmarks.HybridPoseLandmarks` for Nitro object registration.
+- iOS autolinking sets `SWIFT_INSTALL_OBJC_HEADER=NO` to avoid static-linking header issues on newer Xcode versions.
 
 ## Credits
 
