@@ -6,16 +6,20 @@
 ///
 
 import NitroModules
+import os.log
 
 // TODO: Use empty enums once Swift supports exporting them as namespaces
 //       See: https://github.com/swiftlang/swift/pull/83616
 public final class PoseLandmarksAutolinking {
   public typealias bridge = margelo.nitro.poselandmarks.bridge.swift
+  private static let logger = Logger(subsystem: "com.poselandmarks", category: "Autolinking")
 
   public static func createPoseLandmarks() -> bridge.std__shared_ptr_HybridPoseLandmarksSpec_ {
+    logger.debug("createPoseLandmarks called")
     let hybridObject = HybridPoseLandmarks()
     return { () -> bridge.std__shared_ptr_HybridPoseLandmarksSpec_ in
       let __cxxWrapped = hybridObject.getCxxWrapper()
+      logger.debug("Returning C++ wrapper for PoseLandmarks")
       return __cxxWrapped.getCxxPart()
     }()
   }

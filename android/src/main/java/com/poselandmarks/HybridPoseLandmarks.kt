@@ -1,3 +1,13 @@
 package com.poselandmarks
 
-class HybridPoseLandmarks : com.margelo.nitro.poselandmarks.HybridPoseLandmarks()
+import android.util.Log
+
+class HybridPoseLandmarks : com.margelo.nitro.poselandmarks.HybridPoseLandmarks() {
+  init {
+    Log.d(TAG, "com.poselandmarks.HybridPoseLandmarks initialized")
+  }
+
+  companion object {
+    private const val TAG = "HybridPoseLandmarksBridge"
+  }
+}

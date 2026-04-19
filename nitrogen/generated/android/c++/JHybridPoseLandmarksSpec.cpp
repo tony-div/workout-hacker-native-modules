@@ -10,31 +10,42 @@
 
 
 #include <vector>
+#include <android/log.h>
+
+#define TAG "PoseLandmarksBridge"
+#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
+#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
 namespace margelo::nitro::poselandmarks {
 
   std::shared_ptr<JHybridPoseLandmarksSpec> JHybridPoseLandmarksSpec::JavaPart::getJHybridPoseLandmarksSpec() {
+    LOGD("JavaPart::getJHybridPoseLandmarksSpec called");
     auto hybridObject = JHybridObject::JavaPart::getJHybridObject();
     auto castHybridObject = std::dynamic_pointer_cast<JHybridPoseLandmarksSpec>(hybridObject);
     if (castHybridObject == nullptr) [[unlikely]] {
+      LOGE("Failed to downcast JHybridObject to JHybridPoseLandmarksSpec");
       throw std::runtime_error("Failed to downcast JHybridObject to JHybridPoseLandmarksSpec!");
     }
     return castHybridObject;
   }
 
   jni::local_ref<JHybridPoseLandmarksSpec::CxxPart::jhybriddata> JHybridPoseLandmarksSpec::CxxPart::initHybrid(jni::alias_ref<jhybridobject> jThis) {
+    LOGD("CxxPart::initHybrid called");
     return makeCxxInstance(jThis);
   }
 
   std::shared_ptr<JHybridObject> JHybridPoseLandmarksSpec::CxxPart::createHybridObject(const jni::local_ref<JHybridObject::JavaPart>& javaPart) {
+    LOGD("CxxPart::createHybridObject called");
     auto castJavaPart = jni::dynamic_ref_cast<JHybridPoseLandmarksSpec::JavaPart>(javaPart);
     if (castJavaPart == nullptr) [[unlikely]] {
+      LOGE("Failed to cast JavaPart to JHybridPoseLandmarksSpec::JavaPart");
       throw std::runtime_error("Failed to cast JHybridObject::JavaPart to JHybridPoseLandmarksSpec::JavaPart!");
     }
     return std::make_shared<JHybridPoseLandmarksSpec>(castJavaPart);
   }
 
   void JHybridPoseLandmarksSpec::CxxPart::registerNatives() {
+    LOGD("CxxPart::registerNatives called");
     registerHybrid({
       makeNativeMethod("initHybrid", JHybridPoseLandmarksSpec::CxxPart::initHybrid),
     });
@@ -45,28 +56,36 @@ namespace margelo::nitro::poselandmarks {
 
   // Methods
   bool JHybridPoseLandmarksSpec::initPoseLandmarker() {
+    LOGD("initPoseLandmarker called from C++ bridge");
     static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean()>("initPoseLandmarker");
     auto __result = method(_javaPart);
+    LOGD("initPoseLandmarker result=%d", static_cast<bool>(__result));
     return static_cast<bool>(__result);
   }
   bool JHybridPoseLandmarksSpec::closePoseLandmarker() {
+    LOGD("closePoseLandmarker called from C++ bridge");
     static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean()>("closePoseLandmarker");
     auto __result = method(_javaPart);
+    LOGD("closePoseLandmarker result=%d", static_cast<bool>(__result));
     return static_cast<bool>(__result);
   }
   std::vector<double> JHybridPoseLandmarksSpec::getLandmarksBuffer() {
+    LOGD("getLandmarksBuffer called from C++ bridge");
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JArrayDouble>()>("getLandmarksBuffer");
     auto __result = method(_javaPart);
     return [&]() {
       size_t __size = __result->size();
+      LOGD("getLandmarksBuffer java array size=%zu", __size);
       std::vector<double> __vector(__size);
       __result->getRegion(0, __size, __vector.data());
       return __vector;
     }();
   }
   double JHybridPoseLandmarksSpec::getLastInferenceTimeMs() {
+    LOGD("getLastInferenceTimeMs called from C++ bridge");
     static const auto method = _javaPart->javaClassStatic()->getMethod<double()>("getLastInferenceTimeMs");
     auto __result = method(_javaPart);
+    LOGD("getLastInferenceTimeMs result=%f", __result);
     return __result;
   }
 

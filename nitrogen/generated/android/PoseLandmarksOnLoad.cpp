@@ -14,15 +14,22 @@
 #include <jni.h>
 #include <fbjni/fbjni.h>
 #include <NitroModules/HybridObjectRegistry.hpp>
+#include <android/log.h>
 
 #include "JHybridPoseLandmarksSpec.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
 
 namespace margelo::nitro::poselandmarks {
 
+#define TAG "PoseLandmarksOnLoad"
+#define LOGI(...) __android_log_print(ANDROID_LOG_INFO, TAG, __VA_ARGS__)
+
 int initialize(JavaVM* vm) {
+  LOGI("initialize(JavaVM*) called");
   return facebook::jni::initialize(vm, []() {
+    LOGI("facebook::jni::initialize callback started");
     ::margelo::nitro::poselandmarks::registerAllNatives();
+    LOGI("facebook::jni::initialize callback finished");
   });
 }
 
@@ -38,17 +45,21 @@ struct JHybridPoseLandmarksSpecImpl: public jni::JavaClass<JHybridPoseLandmarksS
 void registerAllNatives() {
   using namespace margelo::nitro;
   using namespace margelo::nitro::poselandmarks;
+  LOGI("registerAllNatives called");
 
   // Register native JNI methods
   margelo::nitro::poselandmarks::JHybridPoseLandmarksSpec::CxxPart::registerNatives();
+  LOGI("registerNatives complete");
 
   // Register Nitro Hybrid Objects
   HybridObjectRegistry::registerHybridObjectConstructor(
     "PoseLandmarks",
     []() -> std::shared_ptr<HybridObject> {
+      LOGI("HybridObjectRegistry constructor invoked for PoseLandmarks");
       return JHybridPoseLandmarksSpecImpl::create();
     }
   );
+  LOGI("HybridObject constructor registration complete");
 }
 
 } // namespace margelo::nitro::poselandmarks

@@ -12,10 +12,14 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.facebook.proguard.annotations.DoNotStrip
+import android.os.Handler
+import android.os.Looper
 
 import com.margelo.nitro.NitroModules
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @DoNotStrip
 @Keep
@@ -43,6 +47,13 @@ open class HybridPoseLandmarks : HybridPoseLandmarksSpec(), PoseLandmarkerHelper
             poseLandmarkerHelperListener = this
         )
         Log.d("native-pose-landmarker", "got a PoseLandmarkerHelper instance")
+        if (poseLandmarkerHelper?.isInitialized() != true) {
+            Log.e("native-pose-landmarker", "pose landmarker helper failed to initialize")
+            poseLandmarkerHelper = null
+            cameraExecutor?.shutdown()
+            cameraExecutor = null
+            return false
+        }
 
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
@@ -118,7 +129,22 @@ open class HybridPoseLandmarks : HybridPoseLandmarksSpec(), PoseLandmarkerHelper
 
     override fun closePoseLandmarker(): Boolean {
         Log.d("native-pose-landmarker", "closing pose landmarker...")
-        cameraProvider?.unbindAll()
+        val cp = cameraProvider
+        if (cp != null) {
+            if (Looper.myLooper() == Looper.getMainLooper()) {
+                cp.unbindAll()
+            } else {
+                val latch = CountDownLatch(1)
+                Handler(Looper.getMainLooper()).post {
+                    try {
+                        cp.unbindAll()
+                    } finally {
+                        latch.countDown()
+                    }
+                }
+                latch.await(2, TimeUnit.SECONDS)
+            }
+        }
         cameraProvider = null
         cameraExecutor?.shutdown()
         cameraExecutor = null
@@ -129,10 +155,12 @@ open class HybridPoseLandmarks : HybridPoseLandmarksSpec(), PoseLandmarkerHelper
     }
 
     override fun getLandmarksBuffer(): DoubleArray {
+        Log.v("native-pose-landmarker", "getLandmarksBuffer called. Buffer length=${latestLandmarks.size}")
         return latestLandmarks
     }
 
     override fun getLastInferenceTimeMs(): Double {
+        Log.v("native-pose-landmarker", "getLastInferenceTimeMs called. lastInferenceTimeMs=$lastInferenceTimeMs")
         return lastInferenceTimeMs
     }
 
@@ -157,12 +185,17 @@ open class HybridPoseLandmarks : HybridPoseLandmarksSpec(), PoseLandmarkerHelper
                     // y
                     buffer[i * 4 + 1] = 1 - landmark.x().toDouble()
                     buffer[i * 4 + 2] = landmark.z().toDouble()
-                    buffer[i * 4 + 3] = if (landmark.visibility().isPresent) landmark.visibility().get().toDouble() else 0.0
+                    buffer[i * 4 + 3] = if (landmark.visibility().isPresent) landmark.visibility().get().toDouble() else 1.0
                 }
                 latestLandmarks = buffer
+                Log.v("native-pose-landmarker", "updated latestLandmarks buffer with ${buffer.size} values")
             } else {
                 Log.v("native-pose-landmarker", "no pose landmarks in first result")
+                latestLandmarks = DoubleArray(0)
             }
+        } else {
+            Log.v("native-pose-landmarker", "onResults had empty results list")
+            latestLandmarks = DoubleArray(0)
         }
     }
 }

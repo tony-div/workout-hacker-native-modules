@@ -34,8 +34,8 @@ class PoseLandmarkerHelper(
     private var minPoseDetectionConfidence: Float = DEFAULT_POSE_DETECTION_CONFIDENCE,
     private var minPoseTrackingConfidence: Float = DEFAULT_POSE_TRACKING_CONFIDENCE,
     private var minPosePresenceConfidence: Float = DEFAULT_POSE_PRESENCE_CONFIDENCE,
-    private var currentModel: Int = MODEL_POSE_LANDMARKER_FULL,
-    private var currentDelegate: Int = DELEGATE_GPU,
+    private var currentModel: Int = MODEL_POSE_LANDMARKER_LITE,
+    private var currentDelegate: Int = DELEGATE_CPU,
     private var runningMode: RunningMode = RunningMode.LIVE_STREAM,
     val context: Context,
     // this listener is only used when running in RunningMode.LIVE_STREAM
@@ -54,6 +54,10 @@ class PoseLandmarkerHelper(
     fun clearPoseLandmarker() {
         poseLandmarker?.close()
         poseLandmarker = null
+    }
+
+    fun isInitialized(): Boolean {
+        return poseLandmarker != null
     }
 
     // Initialize the Pose landmarker using current settings on the
@@ -82,6 +86,25 @@ class PoseLandmarkerHelper(
                 MODEL_POSE_LANDMARKER_HEAVY -> "pose_landmarker_heavy.task"
                 else -> "pose_landmarker_lite.task"
             }
+
+        val modelAssetExists = runCatching {
+            context.assets.open(modelName).use { }
+            true
+        }.getOrElse { false }
+        if (!modelAssetExists) {
+            val rootAssets = runCatching { context.assets.list("")?.joinToString(", ") ?: "<empty>" }
+                .getOrElse { "<unavailable>" }
+            Log.e(
+                TAG,
+                "setupPoseLandmarker: model asset '$modelName' is missing from app assets. Root assets: $rootAssets"
+            )
+            poseLandmarkerHelperListener?.onError(
+                "Pose Landmarker model asset '$modelName' not found in Android assets"
+            )
+            poseLandmarker = null
+            return
+        }
+        Log.d(TAG, "setupPoseLandmarker: found model asset '$modelName'")
 
         baseOptionBuilder.setModelAssetPath(modelName)
 
@@ -162,7 +185,11 @@ class PoseLandmarkerHelper(
             )
 
         try {
-            imageProxy.use { bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer) }
+            imageProxy.use {
+                val buffer = imageProxy.planes[0].buffer
+                buffer.rewind()
+                bitmapBuffer.copyPixelsFromBuffer(buffer)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "detectLiveStream: failed to copy pixels: ${e.message}")
             imageProxy.close()
