@@ -73,6 +73,22 @@ Each landmark uses this layout in the flattened array:
 
 Total values in one frame: `33 * 4 = 132`.
 
+## Explore the example app
+
+Use the workspace example to validate integration and inspect runtime behavior:
+
+```bash
+npm install
+npm run -w example start
+npm run -w example android
+```
+
+Important Android asset note:
+
+- The default Android runtime now uses the Lite model on CPU.
+- Ensure `pose_landmarker_lite.task` exists in your app assets.
+- In this repo, it is bundled at `example/android/app/src/main/assets/pose_landmarker_lite.task`.
+
 ## API
 
 The module exports a single hybrid object from `src/index.ts`:
@@ -135,6 +151,13 @@ npm run codegen
 
 6. Open a pull request with a clear description of the change and why it is needed.
 
+Recommended validation matrix before opening a PR:
+
+- JS/TS-only changes: `npm run typecheck` and `npm run build`
+- Spec/native interface changes: `npm run codegen`, then `npm run typecheck` and `npm run build`
+- Android runtime changes: also run `npm run -w example android`
+- iOS runtime changes: also run `npm run -w example ios`
+
 For larger changes, open an issue first so design/API decisions can be aligned early.
 
 ## Compatibility Notes
@@ -142,6 +165,17 @@ For larger changes, open an issue first so design/API decisions can be aligned e
 - Generated with Nitrogen `0.35.4`.
 - Android includes `com.poselandmarks.HybridPoseLandmarks` as an adapter class for Nitro object registration.
 - iOS autolinking sets `SWIFT_INSTALL_OBJC_HEADER=NO` to avoid static-linking header issues on newer Xcode versions.
+
+## Troubleshooting
+
+- `PoseLandmarks.initPoseLandmarker()` returns `false` on Android:
+  - Confirm the model file is in app assets (`pose_landmarker_lite.task` by default).
+  - Check logcat for `Pose Landmarker model asset '...' not found in Android assets`.
+- Landmarks array remains empty:
+  - Verify camera permission is granted.
+  - Verify camera analyzer binding succeeded in logs (`bound imageAnalyzer to lifecycle successfully`).
+- Native bindings look out of sync after spec changes:
+  - Re-run `npm run codegen` (this also reapplies the generated Android include-path patch via `post-script.js`).
 
 ## Release
 
