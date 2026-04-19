@@ -18,7 +18,7 @@
 ## Installation
 
 ```bash
-npm install react-native-pose-landmarks react-native-nitro-modules
+npm install tony-div/react-native-pose-landmarks#v1.1.0 react-native-nitro-modules
 ```
 
 For iOS, install pods after adding dependencies:
