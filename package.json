@@ -12,7 +12,8 @@
     "clean": "git clean -dfX",
     "release": "semantic-release",
     "build": "npm run typecheck && bob build",
-    "codegen": "nitrogen --logLevel=\"debug\" && npm run build && node post-script.js"
+    "codegen": "nitrogen --logLevel=\"debug\" && npm run build && node post-script.js",
+    "postinstall": "node scripts/download-assets.js"
   },
   "keywords": [
     "react-native",
@@ -20,11 +21,13 @@
   ],
   "files": [
     "src",
+    "scripts",
     "react-native.config.js",
     "lib",
     "nitrogen",
     "cpp",
     "nitro.json",
+    "example/android/app/src/main/assets",
     "android/build.gradle",
     "android/fix-prefab.gradle",
     "android/gradle.properties",
