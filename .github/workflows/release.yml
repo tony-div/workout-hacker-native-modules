@@ -26,15 +26,15 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Build debug APK
+      - name: Build release APK
         working-directory: example/android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleRelease --no-daemon
 
-      - name: Upload APK
+      - name: Upload release APK
         uses: actions/upload-artifact@v4
         with:
-          name: android-debug-apk
-          path: example/android/app/build/outputs/apk/debug/*.apk
+          name: android-release-apk
+          path: example/android/app/build/outputs/apk/release/*.apk
 
   release:
     name: Publish GitHub Release
@@ -43,7 +43,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: android-debug-apk
+          name: android-release-apk
 
       - name: Create release
         uses: softprops/action-gh-release@v3
