@@ -14,6 +14,7 @@ namespace PoseLandmarks { class HybridPoseLandmarksSpec_cxx; }
 
 
 
+#include <optional>
 #include <vector>
 
 #include "PoseLandmarks-Swift-Cxx-Umbrella.hpp"
@@ -66,8 +67,8 @@ namespace margelo::nitro::poselandmarks {
 
   public:
     // Methods
-    inline bool initPoseLandmarker() override {
-      auto __result = _swiftPart.initPoseLandmarker();
+    inline bool initPoseLandmarker(std::optional<double> minVisibilityConfidence, std::optional<double> inferenceSampleRateHz, std::optional<double> rigidBodyWindowFrames, std::optional<double> modelSelection, std::optional<bool> enableVisibilityRecovery, std::optional<bool> enableRigidBodyConstraint, std::optional<bool> enableOneEuroFilter, std::optional<bool> enableMotionPrediction, std::optional<double> oneEuroMinCutoff, std::optional<double> oneEuroBeta) override {
+      auto __result = _swiftPart.initPoseLandmarker(minVisibilityConfidence, inferenceSampleRateHz, rigidBodyWindowFrames, modelSelection, enableVisibilityRecovery, enableRigidBodyConstraint, enableOneEuroFilter, enableMotionPrediction, oneEuroMinCutoff, oneEuroBeta);
       if (__result.hasError()) [[unlikely]] {
         std::rethrow_exception(__result.error());
       }

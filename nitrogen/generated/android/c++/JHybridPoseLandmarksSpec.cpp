@@ -10,42 +10,32 @@
 
 
 #include <vector>
-#include <android/log.h>
-
-#define TAG "PoseLandmarksBridge"
-#define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
-#define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
+#include <optional>
 
 namespace margelo::nitro::poselandmarks {
 
   std::shared_ptr<JHybridPoseLandmarksSpec> JHybridPoseLandmarksSpec::JavaPart::getJHybridPoseLandmarksSpec() {
-    LOGD("JavaPart::getJHybridPoseLandmarksSpec called");
     auto hybridObject = JHybridObject::JavaPart::getJHybridObject();
     auto castHybridObject = std::dynamic_pointer_cast<JHybridPoseLandmarksSpec>(hybridObject);
     if (castHybridObject == nullptr) [[unlikely]] {
-      LOGE("Failed to downcast JHybridObject to JHybridPoseLandmarksSpec");
       throw std::runtime_error("Failed to downcast JHybridObject to JHybridPoseLandmarksSpec!");
     }
     return castHybridObject;
   }
 
   jni::local_ref<JHybridPoseLandmarksSpec::CxxPart::jhybriddata> JHybridPoseLandmarksSpec::CxxPart::initHybrid(jni::alias_ref<jhybridobject> jThis) {
-    LOGD("CxxPart::initHybrid called");
     return makeCxxInstance(jThis);
   }
 
   std::shared_ptr<JHybridObject> JHybridPoseLandmarksSpec::CxxPart::createHybridObject(const jni::local_ref<JHybridObject::JavaPart>& javaPart) {
-    LOGD("CxxPart::createHybridObject called");
     auto castJavaPart = jni::dynamic_ref_cast<JHybridPoseLandmarksSpec::JavaPart>(javaPart);
     if (castJavaPart == nullptr) [[unlikely]] {
-      LOGE("Failed to cast JavaPart to JHybridPoseLandmarksSpec::JavaPart");
       throw std::runtime_error("Failed to cast JHybridObject::JavaPart to JHybridPoseLandmarksSpec::JavaPart!");
     }
     return std::make_shared<JHybridPoseLandmarksSpec>(castJavaPart);
   }
 
   void JHybridPoseLandmarksSpec::CxxPart::registerNatives() {
-    LOGD("CxxPart::registerNatives called");
     registerHybrid({
       makeNativeMethod("initHybrid", JHybridPoseLandmarksSpec::CxxPart::initHybrid),
     });
@@ -55,37 +45,29 @@ namespace margelo::nitro::poselandmarks {
   
 
   // Methods
-  bool JHybridPoseLandmarksSpec::initPoseLandmarker() {
-    LOGD("initPoseLandmarker called from C++ bridge");
-    static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean()>("initPoseLandmarker");
-    auto __result = method(_javaPart);
-    LOGD("initPoseLandmarker result=%d", static_cast<bool>(__result));
+  bool JHybridPoseLandmarksSpec::initPoseLandmarker(std::optional<double> minVisibilityConfidence, std::optional<double> inferenceSampleRateHz, std::optional<double> rigidBodyWindowFrames, std::optional<double> modelSelection, std::optional<bool> enableVisibilityRecovery, std::optional<bool> enableRigidBodyConstraint, std::optional<bool> enableOneEuroFilter, std::optional<bool> enableMotionPrediction, std::optional<double> oneEuroMinCutoff, std::optional<double> oneEuroBeta) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean(jni::alias_ref<jni::JDouble> /* minVisibilityConfidence */, jni::alias_ref<jni::JDouble> /* inferenceSampleRateHz */, jni::alias_ref<jni::JDouble> /* rigidBodyWindowFrames */, jni::alias_ref<jni::JDouble> /* modelSelection */, jni::alias_ref<jni::JBoolean> /* enableVisibilityRecovery */, jni::alias_ref<jni::JBoolean> /* enableRigidBodyConstraint */, jni::alias_ref<jni::JBoolean> /* enableOneEuroFilter */, jni::alias_ref<jni::JBoolean> /* enableMotionPrediction */, jni::alias_ref<jni::JDouble> /* oneEuroMinCutoff */, jni::alias_ref<jni::JDouble> /* oneEuroBeta */)>("initPoseLandmarker");
+    auto __result = method(_javaPart, minVisibilityConfidence.has_value() ? jni::JDouble::valueOf(minVisibilityConfidence.value()) : nullptr, inferenceSampleRateHz.has_value() ? jni::JDouble::valueOf(inferenceSampleRateHz.value()) : nullptr, rigidBodyWindowFrames.has_value() ? jni::JDouble::valueOf(rigidBodyWindowFrames.value()) : nullptr, modelSelection.has_value() ? jni::JDouble::valueOf(modelSelection.value()) : nullptr, enableVisibilityRecovery.has_value() ? jni::JBoolean::valueOf(enableVisibilityRecovery.value()) : nullptr, enableRigidBodyConstraint.has_value() ? jni::JBoolean::valueOf(enableRigidBodyConstraint.value()) : nullptr, enableOneEuroFilter.has_value() ? jni::JBoolean::valueOf(enableOneEuroFilter.value()) : nullptr, enableMotionPrediction.has_value() ? jni::JBoolean::valueOf(enableMotionPrediction.value()) : nullptr, oneEuroMinCutoff.has_value() ? jni::JDouble::valueOf(oneEuroMinCutoff.value()) : nullptr, oneEuroBeta.has_value() ? jni::JDouble::valueOf(oneEuroBeta.value()) : nullptr);
     return static_cast<bool>(__result);
   }
   bool JHybridPoseLandmarksSpec::closePoseLandmarker() {
-    LOGD("closePoseLandmarker called from C++ bridge");
     static const auto method = _javaPart->javaClassStatic()->getMethod<jboolean()>("closePoseLandmarker");
     auto __result = method(_javaPart);
-    LOGD("closePoseLandmarker result=%d", static_cast<bool>(__result));
     return static_cast<bool>(__result);
   }
   std::vector<double> JHybridPoseLandmarksSpec::getLandmarksBuffer() {
-    LOGD("getLandmarksBuffer called from C++ bridge");
     static const auto method = _javaPart->javaClassStatic()->getMethod<jni::local_ref<jni::JArrayDouble>()>("getLandmarksBuffer");
     auto __result = method(_javaPart);
     return [&]() {
       size_t __size = __result->size();
-      LOGD("getLandmarksBuffer java array size=%zu", __size);
       std::vector<double> __vector(__size);
       __result->getRegion(0, __size, __vector.data());
       return __vector;
     }();
   }
   double JHybridPoseLandmarksSpec::getLastInferenceTimeMs() {
-    LOGD("getLastInferenceTimeMs called from C++ bridge");
     static const auto method = _javaPart->javaClassStatic()->getMethod<double()>("getLastInferenceTimeMs");
     auto __result = method(_javaPart);
-    LOGD("getLastInferenceTimeMs result=%f", __result);
     return __result;
   }
 

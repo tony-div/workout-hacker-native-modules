@@ -30,7 +30,7 @@ abstract class HybridPoseLandmarksSpec: HybridObject() {
   // Methods
   @DoNotStrip
   @Keep
-  abstract fun initPoseLandmarker(): Boolean
+  abstract fun initPoseLandmarker(minVisibilityConfidence: Double?, inferenceSampleRateHz: Double?, rigidBodyWindowFrames: Double?, modelSelection: Double?, enableVisibilityRecovery: Boolean?, enableRigidBodyConstraint: Boolean?, enableOneEuroFilter: Boolean?, enableMotionPrediction: Boolean?, oneEuroMinCutoff: Double?, oneEuroBeta: Double?): Boolean
   
   @DoNotStrip
   @Keep

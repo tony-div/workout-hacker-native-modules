@@ -125,9 +125,79 @@ open class HybridPoseLandmarksSpec_cxx {
 
   // Methods
   @inline(__always)
-  public final func initPoseLandmarker() -> bridge.Result_bool_ {
+  public final func initPoseLandmarker(minVisibilityConfidence: bridge.std__optional_double_, inferenceSampleRateHz: bridge.std__optional_double_, rigidBodyWindowFrames: bridge.std__optional_double_, modelSelection: bridge.std__optional_double_, enableVisibilityRecovery: bridge.std__optional_bool_, enableRigidBodyConstraint: bridge.std__optional_bool_, enableOneEuroFilter: bridge.std__optional_bool_, enableMotionPrediction: bridge.std__optional_bool_, oneEuroMinCutoff: bridge.std__optional_double_, oneEuroBeta: bridge.std__optional_double_) -> bridge.Result_bool_ {
     do {
-      let __result = try self.__implementation.initPoseLandmarker()
+      let __result = try self.__implementation.initPoseLandmarker(minVisibilityConfidence: { () -> Double? in
+        if bridge.has_value_std__optional_double_(minVisibilityConfidence) {
+          let __unwrapped = bridge.get_std__optional_double_(minVisibilityConfidence)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }(), inferenceSampleRateHz: { () -> Double? in
+        if bridge.has_value_std__optional_double_(inferenceSampleRateHz) {
+          let __unwrapped = bridge.get_std__optional_double_(inferenceSampleRateHz)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }(), rigidBodyWindowFrames: { () -> Double? in
+        if bridge.has_value_std__optional_double_(rigidBodyWindowFrames) {
+          let __unwrapped = bridge.get_std__optional_double_(rigidBodyWindowFrames)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }(), modelSelection: { () -> Double? in
+        if bridge.has_value_std__optional_double_(modelSelection) {
+          let __unwrapped = bridge.get_std__optional_double_(modelSelection)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }(), enableVisibilityRecovery: { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(enableVisibilityRecovery) {
+          let __unwrapped = bridge.get_std__optional_bool_(enableVisibilityRecovery)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }(), enableRigidBodyConstraint: { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(enableRigidBodyConstraint) {
+          let __unwrapped = bridge.get_std__optional_bool_(enableRigidBodyConstraint)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }(), enableOneEuroFilter: { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(enableOneEuroFilter) {
+          let __unwrapped = bridge.get_std__optional_bool_(enableOneEuroFilter)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }(), enableMotionPrediction: { () -> Bool? in
+        if bridge.has_value_std__optional_bool_(enableMotionPrediction) {
+          let __unwrapped = bridge.get_std__optional_bool_(enableMotionPrediction)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }(), oneEuroMinCutoff: { () -> Double? in
+        if bridge.has_value_std__optional_double_(oneEuroMinCutoff) {
+          let __unwrapped = bridge.get_std__optional_double_(oneEuroMinCutoff)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }(), oneEuroBeta: { () -> Double? in
+        if bridge.has_value_std__optional_double_(oneEuroBeta) {
+          let __unwrapped = bridge.get_std__optional_double_(oneEuroBeta)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }())
       let __resultCpp = __result
       return bridge.create_Result_bool_(__resultCpp)
     } catch (let __error) {

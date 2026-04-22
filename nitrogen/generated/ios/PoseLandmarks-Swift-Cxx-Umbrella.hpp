@@ -16,6 +16,7 @@ namespace margelo::nitro::poselandmarks { class HybridPoseLandmarksSpec; }
 #include <NitroModules/Result.hpp>
 #include <exception>
 #include <memory>
+#include <optional>
 #include <vector>
 
 // C++ helpers for Swift

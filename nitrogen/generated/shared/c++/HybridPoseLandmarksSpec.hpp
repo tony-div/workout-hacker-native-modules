@@ -15,6 +15,7 @@
 
 
 
+#include <optional>
 #include <vector>
 
 namespace margelo::nitro::poselandmarks {
@@ -48,7 +49,7 @@ namespace margelo::nitro::poselandmarks {
 
     public:
       // Methods
-      virtual bool initPoseLandmarker() = 0;
+      virtual bool initPoseLandmarker(std::optional<double> minVisibilityConfidence, std::optional<double> inferenceSampleRateHz, std::optional<double> rigidBodyWindowFrames, std::optional<double> modelSelection, std::optional<bool> enableVisibilityRecovery, std::optional<bool> enableRigidBodyConstraint, std::optional<bool> enableOneEuroFilter, std::optional<bool> enableMotionPrediction, std::optional<double> oneEuroMinCutoff, std::optional<double> oneEuroBeta) = 0;
       virtual bool closePoseLandmarker() = 0;
       virtual std::vector<double> getLandmarksBuffer() = 0;
       virtual double getLastInferenceTimeMs() = 0;

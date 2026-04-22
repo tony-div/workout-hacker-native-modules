@@ -6,7 +6,6 @@
 ///
 
 #import <Foundation/Foundation.h>
-#import <os/log.h>
 #import <NitroModules/HybridObjectRegistry.hpp>
 #import "PoseLandmarks-Swift-Cxx-Umbrella.hpp"
 #import <type_traits>
@@ -21,17 +20,14 @@
 + (void) load {
   using namespace margelo::nitro;
   using namespace margelo::nitro::poselandmarks;
-  os_log(OS_LOG_DEFAULT, "[PoseLandmarks] PoseLandmarksAutolinking +load called");
 
   HybridObjectRegistry::registerHybridObjectConstructor(
     "PoseLandmarks",
     []() -> std::shared_ptr<HybridObject> {
-      os_log(OS_LOG_DEFAULT, "[PoseLandmarks] Creating PoseLandmarks hybrid object from autolinking");
       std::shared_ptr<HybridPoseLandmarksSpec> hybridObject = PoseLandmarks::PoseLandmarksAutolinking::createPoseLandmarks();
       return hybridObject;
     }
   );
-  os_log(OS_LOG_DEFAULT, "[PoseLandmarks] PoseLandmarks constructor registered");
 }
 
 @end

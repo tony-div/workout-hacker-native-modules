@@ -54,7 +54,7 @@ namespace margelo::nitro::poselandmarks {
 
   public:
     // Methods
-    bool initPoseLandmarker() override;
+    bool initPoseLandmarker(std::optional<double> minVisibilityConfidence, std::optional<double> inferenceSampleRateHz, std::optional<double> rigidBodyWindowFrames, std::optional<double> modelSelection, std::optional<bool> enableVisibilityRecovery, std::optional<bool> enableRigidBodyConstraint, std::optional<bool> enableOneEuroFilter, std::optional<bool> enableMotionPrediction, std::optional<double> oneEuroMinCutoff, std::optional<double> oneEuroBeta) override;
     bool closePoseLandmarker() override;
     std::vector<double> getLandmarksBuffer() override;
     double getLastInferenceTimeMs() override;

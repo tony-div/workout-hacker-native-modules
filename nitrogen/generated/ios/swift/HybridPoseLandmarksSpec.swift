@@ -13,7 +13,7 @@ public protocol HybridPoseLandmarksSpec_protocol: HybridObject {
   
 
   // Methods
-  func initPoseLandmarker() throws -> Bool
+  func initPoseLandmarker(minVisibilityConfidence: Double?, inferenceSampleRateHz: Double?, rigidBodyWindowFrames: Double?, modelSelection: Double?, enableVisibilityRecovery: Bool?, enableRigidBodyConstraint: Bool?, enableOneEuroFilter: Bool?, enableMotionPrediction: Bool?, oneEuroMinCutoff: Double?, oneEuroBeta: Double?) throws -> Bool
   func closePoseLandmarker() throws -> Bool
   func getLandmarksBuffer() throws -> [Double]
   func getLastInferenceTimeMs() throws -> Double
