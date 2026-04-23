@@ -18,7 +18,7 @@
 ## Installation
 
 ```bash
-npm install tony-div/react-native-pose-landmarks#v1.1.0 react-native-nitro-modules
+npm install tony-div/react-native-pose-landmarks#v1.2.0 react-native-nitro-modules
 ```
 
 For iOS, install pods after adding dependencies:
@@ -97,9 +97,22 @@ The module exports a single hybrid object from `src/index.ts`:
 export const PoseLandmarks = NitroModules.createHybridObject<PoseLandmarksSpec>('PoseLandmarks')
 ```
 
-### `PoseLandmarks.initPoseLandmarker(): boolean`
+### `PoseLandmarks.initPoseLandmarker(config?): boolean`
 
 Initializes the native pose landmarker runtime.
+
+```ts
+interface InitConfig {
+  minVisibilityConfidence?: number    // 0..1, default 0.95
+  inferenceSampleRateHz?: number    // 1..30, default 30
+  modelSelection?: number       // 0=full, 1=lite, 2=heavy, default 1 (lite)
+  enableVisibilityRecovery?: boolean  // freeze low-confidence landmarks, default true
+  enableOneEuroFilter?: boolean     // smooth jitter, default true
+  enableMotionPrediction?: boolean // predict motion, default false
+  oneEuroMinCutoff?: number      // 0.01..5, default 1.0
+  oneEuroBeta?: number         // 0..1, default 0.009
+}
+```
 
 - Returns `true` when initialization succeeds.
 - Returns `false` when initialization fails.
@@ -181,8 +194,9 @@ For larger changes, open an issue first so design/API decisions can be aligned e
 
 Releases are published from GitHub Actions when pushing a version tag.
 
-- Create and push a tag in the format `v*` (for example `v1.0.1`).
-- The release workflow creates a GitHub release from that tag.
+- Create and push a tag in the format `v*` (for example `v1.2.0`).
+- The release workflow builds a release APK and creates a GitHub release.
+- APK assets are attached to each GitHub release for direct download.
 
 ## Credits
 
