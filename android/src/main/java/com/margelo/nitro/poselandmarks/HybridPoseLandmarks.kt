@@ -38,7 +38,7 @@ open class HybridPoseLandmarks : HybridPoseLandmarksSpec(), PoseLandmarkerHelper
     private var outputExecutor: ScheduledExecutorService? = null
     private var cameraProvider: ProcessCameraProvider? = null
 
-    private var minVisibilityConfidence: Double = 0.95
+    private var minVisibilityConfidence: Double = 0.9
     private var inferenceSampleRateHz: Double = 30.0
     private var selectedModel: Int = PoseLandmarkerHelper.MODEL_POSE_LANDMARKER_LITE
     private var enableVisibilityRecovery: Boolean = true
