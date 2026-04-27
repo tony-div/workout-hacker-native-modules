@@ -62,7 +62,7 @@
     "@semantic-release/github": "^12.0.6",
     "@semantic-release/npm": "^12.0.2",
     "@semantic-release/release-notes-generator": "^14.1.0",
-    "@types/jest": "^29.5.12",
+    "@types/jest": "^30.0.0",
     "@types/react": "19.2.14",
     "nitrogen": "0.35.4",
     "react": "19.2.5",
