@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Dimensions,
-  LayoutChangeEvent,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -12,13 +11,10 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { PoseLandmarks } from 'react-native-pose-landmarks'
+import { callback } from 'react-native-nitro-modules'
+import { PoseLandmarksView } from 'react-native-pose-landmarks'
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
-
-const LANDMARK_COUNT = 33
-const VALUES_PER_LANDMARK = 4
-const DOT_SIZE = 8
+const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
 const MODEL_LITE = 1
 const MODEL_FULL = 0
@@ -37,11 +33,17 @@ type ProcessingConfig = {
 }
 
 function App(): React.JSX.Element {
-  const [initialized, setInitialized] = useState<boolean | null>(null)
-  const [landmarks, setLandmarks] = useState<number[]>([])
-  const [latencyMs, setLatencyMs] = useState<number>(-1)
+  const viewRef = useRef<any>(null)
 
-const [model, setModel] = useState<ModelKey>('lite')
+  // Camera & skeleton controls (live, no remount needed)
+  const [cameraOn, setCameraOn] = useState(true)
+  const [skeletonOn, setSkeletonOn] = useState(true)
+  const [skeletonColor, setSkeletonColor] = useState('#00FF00')
+  const [landmarkColor, setLandmarkColor] = useState('#FF0000')
+  const [trackedLandmarkIndex, setTrackedLandmarkIndex] = useState(0)
+
+  // Config panel state
+  const [model, setModel] = useState<ModelKey>('lite')
   const [minVisibilityInput, setMinVisibilityInput] = useState('0.95')
   const [sampleRateInput, setSampleRateInput] = useState('30')
   const [configError, setConfigError] = useState<string | null>(null)
@@ -50,19 +52,7 @@ const [model, setModel] = useState<ModelKey>('lite')
   const [enableMotionPrediction, setEnableMotionPrediction] = useState(false)
   const [oneEuroMinCutoffInput, setOneEuroMinCutoffInput] = useState('1.0')
   const [oneEuroBetaInput, setOneEuroBetaInput] = useState('0.009')
-  const [canvasSize, setCanvasSize] = useState({
-    width: SCREEN_WIDTH - 24,
-    height: SCREEN_HEIGHT * 0.5,
-  })
 
-  const [activeMinVisibility, setActiveMinVisibility] = useState(0.95)
-  const [activeSampleRate, setActiveSampleRate] = useState(30)
-  const [activeModel, setActiveModel] = useState<ModelKey>('lite')
-  const [activeEnableVisibilityRecovery, setActiveEnableVisibilityRecovery] = useState(true)
-  const [activeEnableOneEuroFilter, setActiveEnableOneEuroFilter] = useState(true)
-  const [activeEnableMotionPrediction, setActiveEnableMotionPrediction] = useState(false)
-  const [activeOneEuroMinCutoff, setActiveOneEuroMinCutoff] = useState(1.0)
-  const [activeOneEuroBeta, setActiveOneEuroBeta] = useState(0.009)
   const [appliedConfig, setAppliedConfig] = useState<ProcessingConfig>({
     model: 'lite',
     minVisibility: 0.95,
@@ -74,95 +64,53 @@ const [model, setModel] = useState<ModelKey>('lite')
     oneEuroBeta: 0.009,
   })
 
+  // Debug data from hybridRef
+  const [landmarksCount, setLandmarksCount] = useState<number>(0)
+  const [latencyMs, setLatencyMs] = useState<number>(-1)
+  const [sampleLandmark, setSampleLandmark] = useState<string>('--')
+
+  // Key forces remount when config changes (model requires re-init)
+  const [viewKey, setViewKey] = useState(0)
+
+  // Poll landmarks from the view's hybridRef
   useEffect(() => {
-    setLandmarks([])
-    setLatencyMs(-1)
-
-    const isInitialized = PoseLandmarks.initPoseLandmarker(
-      appliedConfig.minVisibility,
-      appliedConfig.sampleRate,
-      undefined,  // rigidBodyWindowFrames deprecated
-      appliedConfig.model === 'lite' ? MODEL_LITE : MODEL_FULL,
-      appliedConfig.enableVisibilityRecovery,
-      undefined,  // enableRigidBodyConstraint deprecated
-      appliedConfig.enableOneEuroFilter,
-      appliedConfig.enableMotionPrediction,
-      appliedConfig.oneEuroMinCutoff,
-      appliedConfig.oneEuroBeta
-    )
-
-    setInitialized(isInitialized)
-
-    if (isInitialized) {
-      setActiveMinVisibility(appliedConfig.minVisibility)
-      setActiveSampleRate(appliedConfig.sampleRate)
-      setActiveModel(appliedConfig.model)
-      setActiveEnableVisibilityRecovery(appliedConfig.enableVisibilityRecovery)
-      setActiveEnableOneEuroFilter(appliedConfig.enableOneEuroFilter)
-      setActiveEnableMotionPrediction(appliedConfig.enableMotionPrediction)
-      setActiveOneEuroMinCutoff(appliedConfig.oneEuroMinCutoff)
-      setActiveOneEuroBeta(appliedConfig.oneEuroBeta)
-    }
-
     const interval = setInterval(() => {
-      if (!isInitialized) {
-        return
+      const ref = viewRef.current
+      if (!ref) return
+
+      const buf = ref.getLandmarksBuffer() as number[]
+      if (buf && buf.length > 0) {
+        const count = buf.length / 4
+        setLandmarksCount(count)
+
+        const idx = trackedLandmarkIndex
+        if (idx < count) {
+          const base = idx * 4
+          const xNorm = buf[base]
+          const yNorm = buf[base + 1]
+          const z = buf[base + 2]
+          const v = buf[base + 3]
+          setSampleLandmark(
+            `#${idx}: (${xNorm.toFixed(3)}, ${yNorm.toFixed(3)}, ${z.toFixed(3)}) v=${v.toFixed(3)}`
+          )
+        }
+      } else {
+        setLandmarksCount(0)
+        setSampleLandmark('--')
       }
 
-      const buffer = PoseLandmarks.getLandmarksBuffer()
-      if (buffer && buffer.length === LANDMARK_COUNT * VALUES_PER_LANDMARK) {
-        setLandmarks(buffer)
-      }
-
-      setLatencyMs(PoseLandmarks.getLastInferenceTimeMs())
+      setLatencyMs(ref.getLastInferenceTimeMs())
     }, 33)
 
-    return () => {
-      clearInterval(interval)
-      PoseLandmarks.closePoseLandmarker()
-    }
-  }, [appliedConfig])
+    return () => clearInterval(interval)
+  }, [trackedLandmarkIndex])
 
-  const renderedLandmarks = useMemo(() => {
-    const dots: React.JSX.Element[] = []
-    for (let i = 0; i < LANDMARK_COUNT; i++) {
-      const base = i * VALUES_PER_LANDMARK
-      const xNorm = Math.max(0, Math.min(1, landmarks[base]))
-      const yNorm = Math.max(0, Math.min(1, landmarks[base + 1]))
-      const x = xNorm * Math.max(0, canvasSize.width - DOT_SIZE)
-      const y = yNorm * Math.max(0, canvasSize.height - DOT_SIZE)
-      const visibility = landmarks[base + 3]
-
-      if (visibility > activeMinVisibility) {
-        dots.push(
-          <View
-            key={`landmark-${i}`}
-            style={[
-              styles.dot,
-              {
-                left: x,
-                top: y,
-              },
-            ]}
-          />
-        )
-      }
-    }
-    return dots
-  }, [activeMinVisibility, canvasSize.height, canvasSize.width, landmarks])
-
-  const onCanvasLayout = (event: LayoutChangeEvent) => {
-    const { width, height } = event.nativeEvent.layout
-    if (width <= 0 || height <= 0) {
-      return
-    }
-    setCanvasSize((prev) => {
-      if (Math.abs(prev.width - width) < 0.5 && Math.abs(prev.height - height) < 0.5) {
-        return prev
-      }
-      return { width, height }
-    })
-  }
+  const handleHybridRef = useCallback(
+    callback((ref: any) => {
+      viewRef.current = ref
+    }),
+    []
+  )
 
   const applyConfig = () => {
     const minVisibility = Number(minVisibilityInput)
@@ -200,15 +148,78 @@ const [model, setModel] = useState<ModelKey>('lite')
       oneEuroMinCutoff,
       oneEuroBeta,
     })
+    setViewKey((k) => k + 1)
   }
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Title */}
         <View style={styles.panel}>
-          <Text style={styles.title}>Pose Landmarks Lab</Text>
-          <Text style={styles.subtitle}>Tune Kotlin pipeline + model selection from JS</Text>
+          <Text style={styles.title}>Pose Landmarks</Text>
+          <Text style={styles.subtitle}>Native view + skeleton overlay testing</Text>
+        </View>
+
+        {/* LIVE CONTROLS — toggle without remount */}
+        <View style={styles.panel}>
+          <Text style={styles.sectionTitle}>Live Controls</Text>
+          <View style={styles.toggleCard}>
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>Camera</Text>
+              <Switch
+                value={cameraOn}
+                onValueChange={setCameraOn}
+                trackColor={{ false: '#334155', true: '#22c55e' }}
+                thumbColor="#f8fafc"
+              />
+            </View>
+            <View style={styles.toggleRow}>
+              <Text style={styles.toggleLabel}>Skeleton overlay</Text>
+              <Switch
+                value={skeletonOn}
+                onValueChange={setSkeletonOn}
+                trackColor={{ false: '#334155', true: '#22c55e' }}
+                thumbColor="#f8fafc"
+              />
+            </View>
+          </View>
+
+          <Text style={styles.label}>Skeleton color</Text>
+          <View style={styles.row}>
+            {['#00FF00', '#00FFFF', '#FFFF00', '#FF00FF', '#FFFFFF'].map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => setSkeletonColor(c)}
+                style={[
+                  styles.colorSwatch,
+                  { backgroundColor: c },
+                  skeletonColor === c && styles.colorSwatchActive,
+                ]}
+              />
+            ))}
+          </View>
+
+          <Text style={styles.label}>Landmark dot color</Text>
+          <View style={styles.row}>
+            {['#FF0000', '#FFA500', '#FF69B4', '#00BFFF', '#FFFFFF'].map((c) => (
+              <Pressable
+                key={c}
+                onPress={() => setLandmarkColor(c)}
+                style={[
+                  styles.colorSwatch,
+                  { backgroundColor: c },
+                  landmarkColor === c && styles.colorSwatchActive,
+                ]}
+              />
+            ))}
+          </View>
+        </View>
+
+        {/* CONFIG PANEL */}
+        <View style={styles.panel}>
+          <Text style={styles.sectionTitle}>Initialization Config</Text>
+          <Text style={styles.configHint}>Changes require remount (Apply button)</Text>
 
           <Text style={styles.label}>Model</Text>
           <View style={styles.row}>
@@ -262,7 +273,7 @@ const [model, setModel] = useState<ModelKey>('lite')
               />
             </View>
             <View style={styles.toggleRow}>
-              <Text style={styles.toggleLabel}>One Euro filter (smooths jitter)</Text>
+              <Text style={styles.toggleLabel}>One Euro filter</Text>
               <Switch
                 value={enableOneEuroFilter}
                 onValueChange={setEnableOneEuroFilter}
@@ -271,7 +282,7 @@ const [model, setModel] = useState<ModelKey>('lite')
               />
             </View>
             <View style={styles.toggleRow}>
-              <Text style={styles.toggleLabel}>Motion prediction (causes jitter)</Text>
+              <Text style={styles.toggleLabel}>Motion prediction</Text>
               <Switch
                 value={enableMotionPrediction}
                 onValueChange={setEnableMotionPrediction}
@@ -304,36 +315,68 @@ const [model, setModel] = useState<ModelKey>('lite')
           </View>
 
           <Pressable style={styles.applyButton} onPress={applyConfig}>
-            <Text style={styles.applyButtonText}>Apply & Reinitialize</Text>
+            <Text style={styles.applyButtonText}>Apply & Remount</Text>
           </Pressable>
 
           {configError ? <Text style={styles.errorText}>{configError}</Text> : null}
+        </View>
+
+        {/* NATIVE VIEW */}
+        <PoseLandmarksView
+          key={viewKey}
+          hybridRef={handleHybridRef}
+          isActive={cameraOn}
+          enableSkeleton={skeletonOn}
+          skeletonColor={skeletonColor}
+          skeletonBoneThickness={8}
+          landmarkColor={landmarkColor}
+          minVisibilityConfidence={appliedConfig.minVisibility}
+          modelSelection={appliedConfig.model === 'lite' ? MODEL_LITE : MODEL_FULL}
+          inferenceSampleRateHz={appliedConfig.sampleRate}
+          enableVisibilityRecovery={appliedConfig.enableVisibilityRecovery}
+          enableOneEuroFilter={appliedConfig.enableOneEuroFilter}
+          enableMotionPrediction={appliedConfig.enableMotionPrediction}
+          oneEuroMinCutoff={appliedConfig.oneEuroMinCutoff}
+          oneEuroBeta={appliedConfig.oneEuroBeta}
+          width={SCREEN_WIDTH - 24}
+          height={SCREEN_WIDTH * 1.33}
+          style={{ width: SCREEN_WIDTH - 24, height: SCREEN_WIDTH * 1.33 }}
+        />
+
+        {/* DEBUG INFO */}
+        <View style={styles.panel}>
+          <Text style={styles.sectionTitle}>Debug Info</Text>
+
+          <Text style={styles.label}>Tracked landmark index</Text>
+          <View style={styles.row}>
+            {[0, 5, 10, 15, 20, 25, 30].map((i) => (
+              <Pressable
+                key={i}
+                onPress={() => setTrackedLandmarkIndex(i)}
+                style={[
+                  styles.chip,
+                  trackedLandmarkIndex === i ? styles.chipActive : null,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    trackedLandmarkIndex === i ? styles.chipTextActive : null,
+                  ]}
+                >
+                  {i}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
 
           <View style={styles.metaBlock}>
-            <Text style={styles.metaLine}>
-              Status: {initialized ? 'active' : 'not active'}
-            </Text>
-            <Text style={styles.metaLine}>
-              Active model: {activeModel}
-            </Text>
-            <Text style={styles.metaLine}>
-              Active config: vis {activeMinVisibility.toFixed(2)} | sample {activeSampleRate}Hz
-            </Text>
-            <Text style={styles.metaLine}>
-              Post: recovery {activeEnableVisibilityRecovery ? 'on' : 'off'} | one-euro {activeEnableOneEuroFilter ? `c=${activeOneEuroMinCutoff},b=${activeOneEuroBeta}` : 'off'} | pred {activeEnableMotionPrediction ? 'on' : 'off'}
-            </Text>
-            <Text style={styles.metaLine}>Points: {landmarks.length / 4}</Text>
+            <Text style={styles.metaLine}>Landmark points: {landmarksCount} / 33</Text>
             <Text style={styles.metaLine}>
               Inference: {latencyMs >= 0 ? `${latencyMs.toFixed(1)} ms` : '--'}
             </Text>
+            <Text style={styles.metaLine}>Sample: {sampleLandmark}</Text>
           </View>
-        </View>
-
-        <View style={styles.canvas} onLayout={onCanvasLayout}>
-          {renderedLandmarks}
-          {landmarks.length === 0 ? (
-            <Text style={styles.placeholder}>Waiting for camera data...</Text>
-          ) : null}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -366,6 +409,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 12,
   },
+  sectionTitle: {
+    color: '#e2e8f0',
+    fontSize: 17,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  configHint: {
+    color: '#64748b',
+    fontSize: 12,
+    marginBottom: 12,
+  },
   label: {
     color: '#dbeafe',
     marginTop: 8,
@@ -375,6 +429,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: 10,
+    flexWrap: 'wrap',
   },
   chip: {
     paddingVertical: 8,
@@ -438,8 +493,19 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#fb7185',
   },
+  colorSwatch: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: '#334155',
+  },
+  colorSwatchActive: {
+    borderColor: '#f8fafc',
+    borderWidth: 3,
+  },
   metaBlock: {
-    marginTop: 12,
+    marginTop: 8,
     padding: 10,
     borderRadius: 10,
     backgroundColor: '#0b1327',
@@ -449,30 +515,8 @@ const styles = StyleSheet.create({
   metaLine: {
     color: '#a8c2ea',
     marginBottom: 4,
-  },
-  canvas: {
-    minHeight: SCREEN_HEIGHT * 0.5,
-    marginHorizontal: 12,
-    borderRadius: 14,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#1f2f4d',
-    backgroundColor: '#030712',
-  },
-  dot: {
-    position: 'absolute',
-    width: DOT_SIZE,
-    height: DOT_SIZE,
-    borderRadius: DOT_SIZE / 2,
-    backgroundColor: '#22c55e',
-    borderWidth: 1,
-    borderColor: '#dcfce7',
-  },
-  placeholder: {
-    color: '#64748b',
-    textAlign: 'center',
-    marginTop: 24,
-    fontSize: 16,
+    fontFamily: 'monospace',
+    fontSize: 12,
   },
 })
 

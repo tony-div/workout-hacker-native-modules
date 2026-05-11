@@ -1,13 +1,11 @@
 package com.margelo.nitro.poselandmarks
 
+import android.graphics.Bitmap
 import android.util.Log
-import android.util.Size
 import androidx.annotation.Keep
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.resolutionselector.AspectRatioStrategy
-import androidx.camera.core.resolutionselector.ResolutionSelector
-import androidx.camera.core.resolutionselector.ResolutionStrategy
+import androidx.camera.core.ImageProxy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -28,7 +26,7 @@ import java.util.concurrent.TimeUnit
 
 @DoNotStrip
 @Keep
-open class HybridPoseLandmarks : HybridPoseLandmarksSpec(), PoseLandmarkerHelper.LandmarkerListener {
+open class HybridPoseLandmarks : HybridPoseLandmarksSpec() {
     private val stateLock = Any()
 
     private var poseLandmarkerHelper: PoseLandmarkerHelper? = null
@@ -94,7 +92,6 @@ override fun initPoseLandmarker(
         poseLandmarkerHelper = PoseLandmarkerHelper(
             currentModel = selectedModel,
             context = context,
-            poseLandmarkerHelperListener = this
         )
         Log.d("native-pose-landmarker", "got a PoseLandmarkerHelper instance")
         if (poseLandmarkerHelper?.isInitialized() != true) {
@@ -161,10 +158,6 @@ private fun applyProcessingConfig(
 
     private fun bindCameraUseCases() {
         Log.d("native-pose-landmarker", "bindCameraUseCases started")
-        NitroModules.applicationContext ?: run {
-            Log.e("native-pose-landmarker", "bindCameraUseCases: context is null")
-            return
-        }
         val cp = cameraProvider ?: run {
             Log.e("native-pose-landmarker", "bindCameraUseCases: cameraProvider is null")
             return
@@ -174,34 +167,40 @@ private fun applyProcessingConfig(
             return
         }
 
-        val cameraSelector = CameraSelector.DEFAULT_FRONT_CAMERA
-        Log.d("native-pose-landmarker", "using DEFAULT_FRONT_CAMERA")
-        val resolutionSelector = ResolutionSelector.Builder()
-            .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
-            .setResolutionStrategy(
-                ResolutionStrategy(
-                    Size(256, 256),
-                    ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
-                )
-            )
-            .build()
         val imageAnalyzer = ImageAnalysis.Builder()
-            .setResolutionSelector(resolutionSelector)
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
             .build()
             .also { analysis ->
                 analysis.setAnalyzer(executor) { imageProxy ->
-                    imageProxy.use { imageProxy ->
-                        Log.v("native-pose-landmarker", "Analyzer received image: ${imageProxy.width}x${imageProxy.height}, rotation: ${imageProxy.imageInfo.rotationDegrees}")
-                        if (shouldRunInference()) {
-                            poseLandmarkerHelper?.detectLiveStream(
-                                imageProxy = imageProxy,
-                                isFrontCamera = true
-                            )
+                    if (!shouldRunInference()) {
+                        imageProxy.close()
+                        return@setAnalyzer
+                    }
+                    val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+                    val bitmap = imageProxyToBitmap(imageProxy)
+                    imageProxy.close()
+                    if (bitmap == null) return@setAnalyzer
+
+                    // CameraX rotationDegrees is CLOCKWISE; MediaPipe expects COUNTER-CLOCKWISE
+                    val mpRotation = (360 - rotationDegrees) % 360
+                    val result = poseLandmarkerHelper?.detectSync(bitmap, mpRotation)
+                    if (result != null) {
+                        val landmarks = result.landmarks()
+                        if (landmarks.isNotEmpty() && landmarks[0].isNotEmpty()) {
+                            val firstPose = landmarks[0]
+                            val rawCoords = DoubleArray(firstPose.size * 3)
+                            val visibility = DoubleArray(firstPose.size)
+                            for (i in firstPose.indices) {
+                                val lm = firstPose[i]
+                                rawCoords[i * 3] = (1 - lm.x()).toDouble()
+                                rawCoords[i * 3 + 1] = lm.y().toDouble()
+                                rawCoords[i * 3 + 2] = lm.z().toDouble()
+                                visibility[i] = if (lm.visibility().isPresent) lm.visibility().get().toDouble() else 1.0
+                            }
+                            processAndStoreFrame(rawCoords, visibility, System.currentTimeMillis())
                         }
                     }
-
                 }
             }
 
@@ -210,12 +209,49 @@ private fun applyProcessingConfig(
             Log.d("native-pose-landmarker", "unbound all existing use cases")
             cp.bindToLifecycle(
                 ProcessLifecycleOwner.get(),
-                cameraSelector,
+                CameraSelector.DEFAULT_FRONT_CAMERA,
                 imageAnalyzer
             )
             Log.d("native-pose-landmarker", "bound imageAnalyzer to lifecycle successfully")
         } catch (e: Exception) {
             Log.e("native-pose-landmarker", "Camera binding failed: ${e.message}", e)
+        }
+    }
+
+    private fun imageProxyToBitmap(imageProxy: ImageProxy): Bitmap? {
+        try {
+            val width = imageProxy.width
+            val height = imageProxy.height
+            if (width <= 0 || height <= 0) return null
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val plane = imageProxy.planes[0]
+            val buffer = plane.buffer
+            buffer.rewind()
+            val rowStride = plane.rowStride
+            val pixelStride = plane.pixelStride
+            if (rowStride == width * pixelStride) {
+                bitmap.copyPixelsFromBuffer(buffer)
+            } else {
+                val pixels = IntArray(width * height)
+                for (y in 0 until height) {
+                    buffer.position(y * rowStride)
+                    for (x in 0 until width) {
+                        val r = buffer.get().toInt() and 0xFF
+                        val g = buffer.get().toInt() and 0xFF
+                        val b = buffer.get().toInt() and 0xFF
+                        val a = buffer.get().toInt() and 0xFF
+                        pixels[y * width + x] = if (pixelStride == 4)
+                            (a shl 24) or (r shl 16) or (g shl 8) or b
+                        else
+                            (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+                    }
+                }
+                bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+            }
+            return bitmap
+        } catch (e: Exception) {
+            Log.e("native-pose-landmarker", "imageProxyToBitmap failed: ${e.message}")
+            return null
         }
     }
 
@@ -268,39 +304,6 @@ private fun applyProcessingConfig(
     override fun getLastInferenceTimeMs(): Double {
         Log.v("native-pose-landmarker", "getLastInferenceTimeMs called. lastInferenceTimeMs=$lastInferenceTimeMs")
         return lastInferenceTimeMs
-    }
-
-    override fun onError(error: String, errorCode: Int) {
-        Log.e("native-pose-landmarker", "Error: $error (code: $errorCode)")
-    }
-
-    override fun onResults(resultBundle: PoseLandmarkerHelper.ResultBundle) {
-        Log.v("native-pose-landmarker", "onResults received from helper. Results count: ${resultBundle.results.size}")
-        synchronized(stateLock) {
-            lastInferenceTimeMs = resultBundle.inferenceTime.toDouble()
-        }
-
-        val results = resultBundle.results
-        if (results.isNotEmpty()) {
-            val poseLandmarks = results[0].landmarks()
-            if (poseLandmarks.isNotEmpty()) {
-                val firstPose = poseLandmarks[0]
-                Log.v("native-pose-landmarker", "detected ${firstPose.size} landmarks")
-                val rawCoords = DoubleArray(firstPose.size * 3)
-                val visibility = DoubleArray(firstPose.size)
-                for (i in firstPose.indices) {
-                    val landmark = firstPose[i]
-                    rawCoords[i * 3] = landmark.y().toDouble()
-                    rawCoords[i * 3 + 1] = 1 - landmark.x().toDouble()
-                    rawCoords[i * 3 + 2] = landmark.z().toDouble()
-                    visibility[i] = if (landmark.visibility().isPresent) landmark.visibility().get().toDouble() else 1.0
-                }
-
-                processAndStoreFrame(rawCoords, visibility, System.currentTimeMillis())
-            } else {
-                Log.v("native-pose-landmarker", "no pose landmarks in first result")
-            }
-        }
     }
 
     private fun shouldRunInference(): Boolean {

@@ -33,8 +33,12 @@ target_sources(
   # Autolinking Setup
   ../nitrogen/generated/android/PoseLandmarksOnLoad.cpp
   # Shared Nitrogen C++ sources
+  ../nitrogen/generated/shared/c++/HybridPoseLandmarksViewSpec.cpp
+  ../nitrogen/generated/shared/c++/views/HybridPoseLandmarksViewComponent.cpp
   ../nitrogen/generated/shared/c++/HybridPoseLandmarksSpec.cpp
   # Android-specific Nitrogen C++ sources
+  ../nitrogen/generated/android/c++/JHybridPoseLandmarksViewSpec.cpp
+  ../nitrogen/generated/android/c++/views/JHybridPoseLandmarksViewStateUpdater.cpp
   ../nitrogen/generated/android/c++/JHybridPoseLandmarksSpec.cpp
 )
 

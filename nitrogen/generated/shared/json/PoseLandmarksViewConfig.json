@@ -1,0 +1,24 @@
+{
+  "uiViewClassName": "PoseLandmarksView",
+  "supportsRawText": false,
+  "bubblingEventTypes": {},
+  "directEventTypes": {},
+  "validAttributes": {
+    "isActive": true,
+    "enableSkeleton": true,
+    "skeletonColor": true,
+    "skeletonBoneThickness": true,
+    "landmarkColor": true,
+    "minVisibilityConfidence": true,
+    "modelSelection": true,
+    "inferenceSampleRateHz": true,
+    "enableVisibilityRecovery": true,
+    "enableOneEuroFilter": true,
+    "enableMotionPrediction": true,
+    "oneEuroMinCutoff": true,
+    "oneEuroBeta": true,
+    "width": true,
+    "height": true,
+    "hybridRef": true
+  }
+}

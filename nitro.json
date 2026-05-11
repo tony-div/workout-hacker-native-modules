@@ -16,6 +16,12 @@
     "PoseLandmarks": {
       "swift": "HybridPoseLandmarks",
       "kotlin": "HybridPoseLandmarks"
+    },
+    "PoseLandmarksView": {
+      "android": {
+        "language": "kotlin",
+        "implementationClassName": "HybridPoseLandmarksView"
+      }
     }
   },
   "ignorePaths": [

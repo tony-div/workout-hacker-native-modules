@@ -15,6 +15,8 @@
 #include <fbjni/fbjni.h>
 #include <NitroModules/HybridObjectRegistry.hpp>
 
+#include "JHybridPoseLandmarksViewSpec.hpp"
+#include "views/JHybridPoseLandmarksViewStateUpdater.hpp"
 #include "JHybridPoseLandmarksSpec.hpp"
 #include <NitroModules/DefaultConstructableObject.hpp>
 
@@ -34,12 +36,22 @@ struct JHybridPoseLandmarksSpecImpl: public jni::JavaClass<JHybridPoseLandmarksS
     return javaPart->getJHybridPoseLandmarksSpec();
   }
 };
+struct JHybridPoseLandmarksViewSpecImpl: public jni::JavaClass<JHybridPoseLandmarksViewSpecImpl, JHybridPoseLandmarksViewSpec::JavaPart> {
+  static constexpr auto kJavaDescriptor = "Lcom/poselandmarks/HybridPoseLandmarksView;";
+  static std::shared_ptr<JHybridPoseLandmarksViewSpec> create() {
+    static const auto constructorFn = javaClassStatic()->getConstructor<JHybridPoseLandmarksViewSpecImpl::javaobject()>();
+    jni::local_ref<JHybridPoseLandmarksViewSpec::JavaPart> javaPart = javaClassStatic()->newObject(constructorFn);
+    return javaPart->getJHybridPoseLandmarksViewSpec();
+  }
+};
 
 void registerAllNatives() {
   using namespace margelo::nitro;
   using namespace margelo::nitro::poselandmarks;
 
   // Register native JNI methods
+  margelo::nitro::poselandmarks::JHybridPoseLandmarksViewSpec::CxxPart::registerNatives();
+  margelo::nitro::poselandmarks::views::JHybridPoseLandmarksViewStateUpdater::registerNatives();
   margelo::nitro::poselandmarks::JHybridPoseLandmarksSpec::CxxPart::registerNatives();
 
   // Register Nitro Hybrid Objects
@@ -47,6 +59,12 @@ void registerAllNatives() {
     "PoseLandmarks",
     []() -> std::shared_ptr<HybridObject> {
       return JHybridPoseLandmarksSpecImpl::create();
+    }
+  );
+  HybridObjectRegistry::registerHybridObjectConstructor(
+    "PoseLandmarksView",
+    []() -> std::shared_ptr<HybridObject> {
+      return JHybridPoseLandmarksViewSpecImpl::create();
     }
   );
 }
