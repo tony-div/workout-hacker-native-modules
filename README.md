@@ -18,7 +18,7 @@
 ## Installation
 
 ```bash
-npm install tony-div/react-native-pose-landmarks#v1.2.0 react-native-nitro-modules
+npm install tony-div/react-native-pose-landmarks#v1.3.0 react-native-nitro-modules
 ```
 
 For iOS, install pods after adding dependencies:
@@ -194,7 +194,7 @@ For larger changes, open an issue first so design/API decisions can be aligned e
 
 Releases are published from GitHub Actions when pushing a version tag.
 
-- Create and push a tag in the format `v*` (for example `v1.2.0`).
+- Create and push a tag in the format `v*` (for example `v1.3.0`).
 - The release workflow builds a release APK and creates a GitHub release.
 - APK assets are attached to each GitHub release for direct download.
 
