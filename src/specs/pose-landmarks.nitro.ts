@@ -6,6 +6,7 @@ export interface PoseLandmarks extends HybridObject<{ ios: 'swift', android: 'ko
     inferenceSampleRateHz?: number,
     rigidBodyWindowFrames?: number,
     modelSelection?: number,
+    delegateSelection?: number,
     enableVisibilityRecovery?: boolean,
     enableRigidBodyConstraint?: boolean,
     enableOneEuroFilter?: boolean,

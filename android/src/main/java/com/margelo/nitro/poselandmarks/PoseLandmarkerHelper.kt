@@ -33,6 +33,7 @@ class PoseLandmarkerHelper(
     private var currentModel: Int = MODEL_POSE_LANDMARKER_LITE,
     private var currentDelegate: Int = DELEGATE_CPU,
     val context: Context,
+    private val onResult: (PoseLandmarkerResult) -> Unit,
 ) {
     private var poseLandmarker: PoseLandmarker? = null
 
@@ -87,11 +88,15 @@ class PoseLandmarkerHelper(
                 .setMinPoseDetectionConfidence(minPoseDetectionConfidence)
                 .setMinTrackingConfidence(minPoseTrackingConfidence)
                 .setMinPosePresenceConfidence(minPosePresenceConfidence)
-                .setRunningMode(RunningMode.IMAGE)
+                .setRunningMode(RunningMode.LIVE_STREAM)
+                .setResultListener { result, _ ->
+                    onResult(result)
+                }
                 .build()
 
             poseLandmarker = PoseLandmarker.createFromOptions(context, options)
-            Log.d(TAG, "setupPoseLandmarker: created successfully (IMAGE mode)")
+            val delegateLabel = if (currentDelegate == DELEGATE_GPU) "GPU" else "CPU"
+            Log.d(TAG, "setupPoseLandmarker: created successfully (LIVE_STREAM mode, $delegateLabel delegate)")
         } catch (e: IllegalStateException) {
             Log.e(TAG, "setupPoseLandmarker: failed: ${e.message}", e)
         } catch (e: RuntimeException) {
@@ -99,25 +104,23 @@ class PoseLandmarkerHelper(
         }
     }
 
-    fun detectSync(bitmap: Bitmap, rotationDegrees: Int): PoseLandmarkerResult? {
+    fun detectAsync(bitmap: Bitmap, timestampMs: Long, rotationDegrees: Int) {
         val landmarker = poseLandmarker
         if (landmarker == null) {
-            Log.e(TAG, "detectSync: poseLandmarker is null")
-            return null
+            Log.e(TAG, "detectAsync: poseLandmarker is null")
+            return
         }
 
+        Log.d(TAG, "detectAsync: submitting frame tsMs=$timestampMs rotation=$rotationDegrees bitmap=${bitmap.width}x${bitmap.height}")
         try {
             val mpImage = BitmapImageBuilder(bitmap).build()
             val options = ImageProcessingOptions.builder()
                 .setRotationDegrees(rotationDegrees)
                 .build()
 
-            val result = landmarker.detect(mpImage, options)
-            Log.d(TAG, "detectSync: result landmarks=${result?.landmarks()?.size} poses=${result?.landmarks()?.get(0)?.size}")
-            return result
+            landmarker.detectAsync(mpImage, options, timestampMs)
         } catch (e: Exception) {
-            Log.e(TAG, "detectSync: error: ${e.message}", e)
-            return null
+            Log.e(TAG, "detectAsync: error: ${e.message}", e)
         }
     }
 

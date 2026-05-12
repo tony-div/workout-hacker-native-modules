@@ -12,7 +12,9 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import com.facebook.proguard.annotations.DoNotStrip
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 
+import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
 import com.margelo.nitro.NitroModules
 import kotlin.math.PI
 import kotlin.math.abs
@@ -39,6 +41,7 @@ open class HybridPoseLandmarks : HybridPoseLandmarksSpec() {
     private var minVisibilityConfidence: Double = 0.9
     private var inferenceSampleRateHz: Double = 30.0
     private var selectedModel: Int = PoseLandmarkerHelper.MODEL_POSE_LANDMARKER_LITE
+    private var selectedDelegate: Int = PoseLandmarkerHelper.DELEGATE_CPU
     private var enableVisibilityRecovery: Boolean = true
     private var enableOneEuroFilter: Boolean = true
     private var enableMotionPrediction: Boolean = false
@@ -51,12 +54,14 @@ open class HybridPoseLandmarks : HybridPoseLandmarksSpec() {
     private var latestSmoothedFrame: LandmarkFrame? = null
     private var latestGoodCoords: DoubleArray? = null
     private var latestGoodVisibility: DoubleArray? = null
+    private val inferenceTimestamps = java.util.concurrent.ConcurrentHashMap<Long, Long>()
 
 override fun initPoseLandmarker(
         minVisibilityConfidence: Double?,
         inferenceSampleRateHz: Double?,
         rigidBodyWindowFrames: Double?,
         modelSelection: Double?,
+        delegateSelection: Double?,
         enableVisibilityRecovery: Boolean?,
         enableRigidBodyConstraint: Boolean?,
         enableOneEuroFilter: Boolean?,
@@ -70,6 +75,7 @@ override fun initPoseLandmarker(
             inferenceSampleRateHz = inferenceSampleRateHz,
             rigidBodyWindowFrames = rigidBodyWindowFrames,
             modelSelection = modelSelection,
+            delegateSelection = delegateSelection,
             enableVisibilityRecovery = enableVisibilityRecovery,
             enableRigidBodyConstraint = enableRigidBodyConstraint,
             enableOneEuroFilter = enableOneEuroFilter,
@@ -91,7 +97,11 @@ override fun initPoseLandmarker(
 
         poseLandmarkerHelper = PoseLandmarkerHelper(
             currentModel = selectedModel,
+            currentDelegate = selectedDelegate,
             context = context,
+            onResult = { result ->
+                processLivestreamResult(result)
+            },
         )
         Log.d("native-pose-landmarker", "got a PoseLandmarkerHelper instance")
         if (poseLandmarkerHelper?.isInitialized() != true) {
@@ -123,6 +133,7 @@ private fun applyProcessingConfig(
         inferenceSampleRateHz: Double?,
         rigidBodyWindowFrames: Double?,
         modelSelection: Double?,
+        delegateSelection: Double?,
         enableVisibilityRecovery: Boolean?,
         enableRigidBodyConstraint: Boolean?,
         enableOneEuroFilter: Boolean?,
@@ -145,6 +156,13 @@ private fun applyProcessingConfig(
                 PoseLandmarkerHelper.MODEL_POSE_LANDMARKER_LITE,
                 PoseLandmarkerHelper.MODEL_POSE_LANDMARKER_HEAVY -> model
                 else -> PoseLandmarkerHelper.MODEL_POSE_LANDMARKER_LITE
+            }
+
+            val delegate = (delegateSelection ?: selectedDelegate.toDouble()).toInt()
+            selectedDelegate = when (delegate) {
+                PoseLandmarkerHelper.DELEGATE_CPU,
+                PoseLandmarkerHelper.DELEGATE_GPU -> delegate
+                else -> PoseLandmarkerHelper.DELEGATE_CPU
             }
 
             oneEuroFilters = null
@@ -179,28 +197,16 @@ private fun applyProcessingConfig(
                     }
                     val rotationDegrees = imageProxy.imageInfo.rotationDegrees
                     val bitmap = imageProxyToBitmap(imageProxy)
+                    val rawTimestampNs = imageProxy.imageInfo.timestamp
+                    val timestampMs = if (rawTimestampNs != null) rawTimestampNs / 1_000_000 else System.currentTimeMillis()
                     imageProxy.close()
                     if (bitmap == null) return@setAnalyzer
 
                     // CameraX rotationDegrees is CLOCKWISE; MediaPipe expects COUNTER-CLOCKWISE
                     val mpRotation = (360 - rotationDegrees) % 360
-                    val result = poseLandmarkerHelper?.detectSync(bitmap, mpRotation)
-                    if (result != null) {
-                        val landmarks = result.landmarks()
-                        if (landmarks.isNotEmpty() && landmarks[0].isNotEmpty()) {
-                            val firstPose = landmarks[0]
-                            val rawCoords = DoubleArray(firstPose.size * 3)
-                            val visibility = DoubleArray(firstPose.size)
-                            for (i in firstPose.indices) {
-                                val lm = firstPose[i]
-                                rawCoords[i * 3] = (1 - lm.x()).toDouble()
-                                rawCoords[i * 3 + 1] = lm.y().toDouble()
-                                rawCoords[i * 3 + 2] = lm.z().toDouble()
-                                visibility[i] = if (lm.visibility().isPresent) lm.visibility().get().toDouble() else 1.0
-                            }
-                            processAndStoreFrame(rawCoords, visibility, System.currentTimeMillis())
-                        }
-                    }
+                    inferenceTimestamps[timestampMs] = SystemClock.uptimeMillis()
+                    poseLandmarkerHelper?.detectAsync(bitmap, timestampMs, mpRotation)
+                    bitmap.recycle()
                 }
             }
 
@@ -372,6 +378,30 @@ private fun applyProcessingConfig(
 
             latestLandmarks = flattenFrame(frame.coords, frame.visibility)
             Log.v("native-pose-landmarker", "updated latestLandmarks buffer with ${latestLandmarks.size} values")
+        }
+    }
+
+    private fun processLivestreamResult(result: PoseLandmarkerResult) {
+        try {
+            val landmarks = result.landmarks()
+            if (landmarks.isNotEmpty() && landmarks[0].isNotEmpty()) {
+                val firstPose = landmarks[0]
+                val rawCoords = DoubleArray(firstPose.size * 3)
+                val visibility = DoubleArray(firstPose.size)
+                for (i in firstPose.indices) {
+                    val lm = firstPose[i]
+                    rawCoords[i * 3] = (1 - lm.x()).toDouble()
+                    rawCoords[i * 3 + 1] = lm.y().toDouble()
+                    rawCoords[i * 3 + 2] = lm.z().toDouble()
+                    visibility[i] = if (lm.visibility().isPresent) lm.visibility().get().toDouble() else 1.0
+                }
+                val submissionMs = inferenceTimestamps.remove(result.timestampMs()) ?: SystemClock.uptimeMillis()
+                val inferenceTimeMs = (SystemClock.uptimeMillis() - submissionMs).coerceAtLeast(0L).toDouble()
+                lastInferenceTimeMs = inferenceTimeMs
+                processAndStoreFrame(rawCoords, visibility, System.currentTimeMillis())
+            }
+        } catch (e: Exception) {
+            Log.e("native-pose-landmarker", "processLivestreamResult: error: ${e.message}", e)
         }
     }
 

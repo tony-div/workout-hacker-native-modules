@@ -96,6 +96,16 @@ namespace margelo::nitro::poselandmarks::views {
         throw std::runtime_error(std::string("PoseLandmarksView.modelSelection: ") + exc.what());
       }
     }()),
+    delegateSelection([&]() -> CachedProp<double> {
+      try {
+        const react::RawValue* rawValue = rawProps.at("delegateSelection", nullptr, nullptr);
+        if (rawValue == nullptr) return sourceProps.delegateSelection;
+        const auto& [runtime, value] = (std::pair<jsi::Runtime*, jsi::Value>)*rawValue;
+        return CachedProp<double>::fromRawValue(*runtime, value, sourceProps.delegateSelection);
+      } catch (const std::exception& exc) {
+        throw std::runtime_error(std::string("PoseLandmarksView.delegateSelection: ") + exc.what());
+      }
+    }()),
     inferenceSampleRateHz([&]() -> CachedProp<double> {
       try {
         const react::RawValue* rawValue = rawProps.at("inferenceSampleRateHz", nullptr, nullptr);
@@ -196,6 +206,7 @@ namespace margelo::nitro::poselandmarks::views {
       case hashString("landmarkColor"): return true;
       case hashString("minVisibilityConfidence"): return true;
       case hashString("modelSelection"): return true;
+      case hashString("delegateSelection"): return true;
       case hashString("inferenceSampleRateHz"): return true;
       case hashString("enableVisibilityRecovery"): return true;
       case hashString("enableOneEuroFilter"): return true;

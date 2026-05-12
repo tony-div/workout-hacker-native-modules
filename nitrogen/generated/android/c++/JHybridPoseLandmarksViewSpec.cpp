@@ -105,6 +105,15 @@ namespace margelo::nitro::poselandmarks {
     static const auto method = _javaPart->javaClassStatic()->getMethod<void(double /* modelSelection */)>("setModelSelection");
     method(_javaPart, modelSelection);
   }
+  double JHybridPoseLandmarksViewSpec::getDelegateSelection() {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<double()>("getDelegateSelection");
+    auto __result = method(_javaPart);
+    return __result;
+  }
+  void JHybridPoseLandmarksViewSpec::setDelegateSelection(double delegateSelection) {
+    static const auto method = _javaPart->javaClassStatic()->getMethod<void(double /* delegateSelection */)>("setDelegateSelection");
+    method(_javaPart, delegateSelection);
+  }
   double JHybridPoseLandmarksViewSpec::getInferenceSampleRateHz() {
     static const auto method = _javaPart->javaClassStatic()->getMethod<double()>("getInferenceSampleRateHz");
     auto __result = method(_javaPart);

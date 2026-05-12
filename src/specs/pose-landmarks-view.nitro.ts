@@ -12,6 +12,7 @@ export interface PoseLandmarksViewProps extends HybridViewProps {
   landmarkColor: string
   minVisibilityConfidence: number
   modelSelection: number
+  delegateSelection: number
   inferenceSampleRateHz: number
   enableVisibilityRecovery: boolean
   enableOneEuroFilter: boolean

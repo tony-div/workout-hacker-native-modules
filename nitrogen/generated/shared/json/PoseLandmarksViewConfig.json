@@ -11,6 +11,7 @@
     "landmarkColor": true,
     "minVisibilityConfidence": true,
     "modelSelection": true,
+    "delegateSelection": true,
     "inferenceSampleRateHz": true,
     "enableVisibilityRecovery": true,
     "enableOneEuroFilter": true,

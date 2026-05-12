@@ -25,12 +25,13 @@ class HybridPoseLandmarksView(private val reactContext: ThemedReactContext) : Hy
   private var cameraProvider: ProcessCameraProvider? = null
   private var cameraExecutor = Executors.newSingleThreadExecutor()
   private var poseLandmarkerHelper: PoseLandmarkerHelper? = null
+  private val inferenceTimestamps = java.util.concurrent.ConcurrentHashMap<Long, Long>()
 
   override var isActive: Boolean = false
     set(value) {
       if (field == value) return
       field = value
-      if (value) startCamera() else stopCamera()
+      if (!value) stopCamera()
     }
 
   override var enableSkeleton: Boolean = true
@@ -65,6 +66,7 @@ class HybridPoseLandmarksView(private val reactContext: ThemedReactContext) : Hy
     }
 
   override var modelSelection: Double = PoseLandmarkerHelper.MODEL_POSE_LANDMARKER_LITE.toDouble()
+  override var delegateSelection: Double = PoseLandmarkerHelper.DELEGATE_CPU.toDouble()
   override var inferenceSampleRateHz: Double = 30.0
   override var enableVisibilityRecovery: Boolean = true
     set(value) {
@@ -115,7 +117,7 @@ class HybridPoseLandmarksView(private val reactContext: ThemedReactContext) : Hy
 
   override fun afterUpdate() {
     val density = reactContext.resources.displayMetrics.density
-    Log.d(TAG, "afterUpdate: width=$width height=$height density=$density")
+    Log.d(TAG, "afterUpdate: width=$width height=$height density=$density isActive=$isActive")
     Log.d(TAG, "afterUpdate: container layoutParams=(${container.layoutParams?.width}x${container.layoutParams?.height}) actual=(${container.width}x${container.height})")
     if (width > 0 && height > 0) {
       val wPx = (width * density).roundToInt()
@@ -127,6 +129,10 @@ class HybridPoseLandmarksView(private val reactContext: ThemedReactContext) : Hy
       overlayView.overlayWidth = wPx
       overlayView.overlayHeight = hPx
       Log.d(TAG, "afterUpdate: set overlay size to ${wPx}x${hPx}")
+    }
+    // Start camera only after all props (useLivestream, modelSelection, etc.) are settled
+    if (isActive && poseLandmarkerHelper == null) {
+      startCamera()
     }
   }
 
@@ -152,7 +158,15 @@ class HybridPoseLandmarksView(private val reactContext: ThemedReactContext) : Hy
       }
     }
 
-    Log.d(TAG, "startCamera: model=$model containerSize=${container.width}x${container.height}")
+    val delegate = delegateSelection.toInt().let { d ->
+      when (d) {
+        PoseLandmarkerHelper.DELEGATE_CPU,
+        PoseLandmarkerHelper.DELEGATE_GPU -> d
+        else -> PoseLandmarkerHelper.DELEGATE_CPU
+      }
+    }
+
+    Log.d(TAG, "startCamera: model=$model delegate=$delegate containerSize=${container.width}x${container.height}")
 
     PoseLandmarkerEngine.minVisibilityConfidence = minVisibilityConfidence
     PoseLandmarkerEngine.enableVisibilityRecovery = enableVisibilityRecovery
@@ -164,7 +178,36 @@ class HybridPoseLandmarksView(private val reactContext: ThemedReactContext) : Hy
 
     poseLandmarkerHelper = PoseLandmarkerHelper(
       currentModel = model,
+      currentDelegate = delegate,
       context = context,
+      onResult = { result ->
+        val detected = result.landmarks()
+        val poseCount = detected.size
+        val lmCount = if (detected.isNotEmpty() && detected[0] != null) detected[0].size else 0
+        Log.d(TAG, "livestream callback fired: poses=$poseCount landmarks_per_pose=$lmCount")
+        if (detected.isNotEmpty() && detected[0].isNotEmpty()) {
+          val firstPose = detected[0]
+          val n = firstPose.size
+          val rawCoords = DoubleArray(n * 3)
+          val rawVisibility = DoubleArray(n)
+          for (i in firstPose.indices) {
+            val lm = firstPose[i]
+            rawCoords[i * 3] = (1 - lm.y()).toDouble()
+            rawCoords[i * 3 + 1] = (1 - lm.x()).toDouble()
+            rawCoords[i * 3 + 2] = lm.z().toDouble()
+            rawVisibility[i] = if (lm.visibility().isPresent) lm.visibility().get().toDouble() else 1.0
+          }
+          val submissionMs = inferenceTimestamps.remove(result.timestampMs()) ?: SystemClock.uptimeMillis()
+          val inferenceTimeMs = (SystemClock.uptimeMillis() - submissionMs).coerceAtLeast(0L).toDouble()
+          PoseLandmarkerEngine.feedRawResults(rawCoords, rawVisibility, System.currentTimeMillis(), inferenceTimeMs)
+          val engineLandmarks = PoseLandmarkerEngine.latestLandmarks
+          if (engineLandmarks.isNotEmpty()) {
+            reactContext.runOnUiQueueThread {
+              overlayView.setLandmarks(engineLandmarks)
+            }
+          }
+        }
+      },
     )
     if (poseLandmarkerHelper?.isInitialized() != true) {
       Log.e(TAG, "startCamera: PoseLandmarkerHelper failed to initialize")
@@ -239,6 +282,8 @@ class HybridPoseLandmarksView(private val reactContext: ThemedReactContext) : Hy
 
     val rotationDegrees = imageProxy.imageInfo.rotationDegrees
     val bitmap = imageProxyToBitmap(imageProxy)
+    val rawTimestampNs = imageProxy.imageInfo.timestamp
+    val timestampMs = if (rawTimestampNs != null) rawTimestampNs / 1_000_000 else System.currentTimeMillis()
     imageProxy.close()
     if (bitmap == null) return
 
@@ -252,44 +297,16 @@ class HybridPoseLandmarksView(private val reactContext: ThemedReactContext) : Hy
       Bitmap.createScaledBitmap(bitmap, iw, ih, true)
     } else bitmap
 
-    val inferenceStart = SystemClock.uptimeMillis()
-    val result = helper.detectSync(inferenceBitmap, 0)
-    val inferenceTimeMs = SystemClock.uptimeMillis() - inferenceStart
+    Log.d(TAG, "processFrame: calling detectAsync tsMs=$timestampMs bitmap=${inferenceBitmap.width}x${inferenceBitmap.height}")
+    inferenceTimestamps[timestampMs] = SystemClock.uptimeMillis()
+    helper.detectAsync(inferenceBitmap, timestampMs, 0)
 
     if (inferenceBitmap !== bitmap) {
       inferenceBitmap.recycle()
     }
 
-    if (result != null) {
-      val landmarks = result.landmarks()
-      if (landmarks.isNotEmpty() && landmarks[0].isNotEmpty()) {
-        val firstPose = landmarks[0]
-        val rawCoords = DoubleArray(firstPose.size * 3)
-        val visibility = DoubleArray(firstPose.size)
-        for (i in firstPose.indices) {
-          val lm = firstPose[i]
-          rawCoords[i * 3] = (1 - lm.y()).toDouble()
-          rawCoords[i * 3 + 1] = (1 - lm.x()).toDouble()
-          rawCoords[i * 3 + 2] = lm.z().toDouble()
-          visibility[i] = if (lm.visibility().isPresent) lm.visibility().get().toDouble() else 1.0
-        }
-
-        PoseLandmarkerEngine.feedRawResults(
-          rawCoords = rawCoords,
-          rawVisibility = visibility,
-          timestampMs = System.currentTimeMillis(),
-          inferenceTimeMs = inferenceTimeMs.toDouble()
-        )
-      }
-    }
-
-    // Feed camera frame (rotated for display) + landmarks to overlay
-    val engineLandmarks = PoseLandmarkerEngine.latestLandmarks
     reactContext.runOnUiQueueThread {
       overlayView.setCameraFrame(bitmap, rotationDegrees)
-      if (engineLandmarks.isNotEmpty()) {
-        overlayView.setLandmarks(engineLandmarks)
-      }
     }
   }
 

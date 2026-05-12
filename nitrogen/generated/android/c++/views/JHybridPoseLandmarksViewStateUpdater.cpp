@@ -65,6 +65,10 @@ void JHybridPoseLandmarksViewStateUpdater::updateViewProps(jni::alias_ref<jni::J
     hybridView->setModelSelection(props->modelSelection.value);
     props->modelSelection.isDirty = false;
   }
+  if (props->delegateSelection.isDirty) {
+    hybridView->setDelegateSelection(props->delegateSelection.value);
+    props->delegateSelection.isDirty = false;
+  }
   if (props->inferenceSampleRateHz.isDirty) {
     hybridView->setInferenceSampleRateHz(props->inferenceSampleRateHz.value);
     props->inferenceSampleRateHz.isDirty = false;

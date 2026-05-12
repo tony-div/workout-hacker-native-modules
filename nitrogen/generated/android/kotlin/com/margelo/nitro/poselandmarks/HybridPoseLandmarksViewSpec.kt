@@ -72,6 +72,12 @@ abstract class HybridPoseLandmarksViewSpec: HybridView() {
   @get:Keep
   @set:DoNotStrip
   @set:Keep
+  abstract var delegateSelection: Double
+  
+  @get:DoNotStrip
+  @get:Keep
+  @set:DoNotStrip
+  @set:Keep
   abstract var inferenceSampleRateHz: Double
   
   @get:DoNotStrip

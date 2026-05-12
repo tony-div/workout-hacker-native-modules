@@ -64,6 +64,8 @@ namespace margelo::nitro::poselandmarks {
     void setMinVisibilityConfidence(double minVisibilityConfidence) override;
     double getModelSelection() override;
     void setModelSelection(double modelSelection) override;
+    double getDelegateSelection() override;
+    void setDelegateSelection(double delegateSelection) override;
     double getInferenceSampleRateHz() override;
     void setInferenceSampleRateHz(double inferenceSampleRateHz) override;
     bool getEnableVisibilityRecovery() override;

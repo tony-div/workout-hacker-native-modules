@@ -28,6 +28,8 @@ namespace margelo::nitro::poselandmarks {
       prototype.registerHybridSetter("minVisibilityConfidence", &HybridPoseLandmarksViewSpec::setMinVisibilityConfidence);
       prototype.registerHybridGetter("modelSelection", &HybridPoseLandmarksViewSpec::getModelSelection);
       prototype.registerHybridSetter("modelSelection", &HybridPoseLandmarksViewSpec::setModelSelection);
+      prototype.registerHybridGetter("delegateSelection", &HybridPoseLandmarksViewSpec::getDelegateSelection);
+      prototype.registerHybridSetter("delegateSelection", &HybridPoseLandmarksViewSpec::setDelegateSelection);
       prototype.registerHybridGetter("inferenceSampleRateHz", &HybridPoseLandmarksViewSpec::getInferenceSampleRateHz);
       prototype.registerHybridSetter("inferenceSampleRateHz", &HybridPoseLandmarksViewSpec::setInferenceSampleRateHz);
       prototype.registerHybridGetter("enableVisibilityRecovery", &HybridPoseLandmarksViewSpec::getEnableVisibilityRecovery);

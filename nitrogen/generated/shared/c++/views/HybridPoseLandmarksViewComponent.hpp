@@ -49,6 +49,7 @@ namespace margelo::nitro::poselandmarks::views {
     CachedProp<std::string> landmarkColor;
     CachedProp<double> minVisibilityConfidence;
     CachedProp<double> modelSelection;
+    CachedProp<double> delegateSelection;
     CachedProp<double> inferenceSampleRateHz;
     CachedProp<bool> enableVisibilityRecovery;
     CachedProp<bool> enableOneEuroFilter;

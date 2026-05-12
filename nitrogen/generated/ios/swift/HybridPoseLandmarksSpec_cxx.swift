@@ -125,7 +125,7 @@ open class HybridPoseLandmarksSpec_cxx {
 
   // Methods
   @inline(__always)
-  public final func initPoseLandmarker(minVisibilityConfidence: bridge.std__optional_double_, inferenceSampleRateHz: bridge.std__optional_double_, rigidBodyWindowFrames: bridge.std__optional_double_, modelSelection: bridge.std__optional_double_, enableVisibilityRecovery: bridge.std__optional_bool_, enableRigidBodyConstraint: bridge.std__optional_bool_, enableOneEuroFilter: bridge.std__optional_bool_, enableMotionPrediction: bridge.std__optional_bool_, oneEuroMinCutoff: bridge.std__optional_double_, oneEuroBeta: bridge.std__optional_double_) -> bridge.Result_bool_ {
+  public final func initPoseLandmarker(minVisibilityConfidence: bridge.std__optional_double_, inferenceSampleRateHz: bridge.std__optional_double_, rigidBodyWindowFrames: bridge.std__optional_double_, modelSelection: bridge.std__optional_double_, delegateSelection: bridge.std__optional_double_, enableVisibilityRecovery: bridge.std__optional_bool_, enableRigidBodyConstraint: bridge.std__optional_bool_, enableOneEuroFilter: bridge.std__optional_bool_, enableMotionPrediction: bridge.std__optional_bool_, oneEuroMinCutoff: bridge.std__optional_double_, oneEuroBeta: bridge.std__optional_double_) -> bridge.Result_bool_ {
     do {
       let __result = try self.__implementation.initPoseLandmarker(minVisibilityConfidence: { () -> Double? in
         if bridge.has_value_std__optional_double_(minVisibilityConfidence) {
@@ -151,6 +151,13 @@ open class HybridPoseLandmarksSpec_cxx {
       }(), modelSelection: { () -> Double? in
         if bridge.has_value_std__optional_double_(modelSelection) {
           let __unwrapped = bridge.get_std__optional_double_(modelSelection)
+          return __unwrapped
+        } else {
+          return nil
+        }
+      }(), delegateSelection: { () -> Double? in
+        if bridge.has_value_std__optional_double_(delegateSelection) {
+          let __unwrapped = bridge.get_std__optional_double_(delegateSelection)
           return __unwrapped
         } else {
           return nil

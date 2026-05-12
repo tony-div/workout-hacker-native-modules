@@ -18,11 +18,15 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
 const MODEL_LITE = 1
 const MODEL_FULL = 0
+const DELEGATE_CPU = 0
+const DELEGATE_GPU = 1
 
 type ModelKey = 'lite' | 'full'
+type DelegateKey = 'cpu' | 'gpu'
 
 type ProcessingConfig = {
   model: ModelKey
+  delegate: DelegateKey
   minVisibility: number
   sampleRate: number
   enableVisibilityRecovery: boolean
@@ -44,6 +48,7 @@ function App(): React.JSX.Element {
 
   // Config panel state
   const [model, setModel] = useState<ModelKey>('lite')
+  const [delegate, setDelegate] = useState<DelegateKey>('cpu')
   const [minVisibilityInput, setMinVisibilityInput] = useState('0.95')
   const [sampleRateInput, setSampleRateInput] = useState('30')
   const [configError, setConfigError] = useState<string | null>(null)
@@ -55,6 +60,7 @@ function App(): React.JSX.Element {
 
   const [appliedConfig, setAppliedConfig] = useState<ProcessingConfig>({
     model: 'lite',
+    delegate: 'cpu',
     minVisibility: 0.95,
     sampleRate: 30,
     enableVisibilityRecovery: true,
@@ -64,12 +70,13 @@ function App(): React.JSX.Element {
     oneEuroBeta: 0.009,
   })
 
-  // Debug data from hybridRef
+  // Debug data
   const [landmarksCount, setLandmarksCount] = useState<number>(0)
   const [latencyMs, setLatencyMs] = useState<number>(-1)
   const [sampleLandmark, setSampleLandmark] = useState<string>('--')
+  const [rawBufferPreview, setRawBufferPreview] = useState<string>('--')
 
-  // Key forces remount when config changes (model requires re-init)
+  // Key forces remount when config changes
   const [viewKey, setViewKey] = useState(0)
 
   // Poll landmarks from the view's hybridRef
@@ -94,9 +101,18 @@ function App(): React.JSX.Element {
             `#${idx}: (${xNorm.toFixed(3)}, ${yNorm.toFixed(3)}, ${z.toFixed(3)}) v=${v.toFixed(3)}`
           )
         }
+
+        const previewLen = Math.min(16, buf.length)
+        let preview = ''
+        for (let i = 0; i < previewLen; i++) {
+          preview += buf[i].toFixed(3)
+          if (i < previewLen - 1) preview += (i + 1) % 4 === 0 ? ' | ' : ', '
+        }
+        setRawBufferPreview(preview)
       } else {
         setLandmarksCount(0)
         setSampleLandmark('--')
+        setRawBufferPreview('--')
       }
 
       setLatencyMs(ref.getLastInferenceTimeMs())
@@ -140,6 +156,7 @@ function App(): React.JSX.Element {
     setConfigError(null)
     setAppliedConfig({
       model,
+      delegate,
       minVisibility,
       sampleRate,
       enableVisibilityRecovery,
@@ -151,6 +168,8 @@ function App(): React.JSX.Element {
     setViewKey((k) => k + 1)
   }
 
+  const delegateLabel = appliedConfig.delegate === 'gpu' ? 'GPU' : 'CPU'
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -158,7 +177,7 @@ function App(): React.JSX.Element {
         {/* Title */}
         <View style={styles.panel}>
           <Text style={styles.title}>Pose Landmarks</Text>
-          <Text style={styles.subtitle}>Native view + skeleton overlay testing</Text>
+          <Text style={styles.subtitle}>LIVE_STREAM / {delegateLabel}</Text>
         </View>
 
         {/* LIVE CONTROLS — toggle without remount */}
@@ -237,6 +256,26 @@ function App(): React.JSX.Element {
             >
               <Text style={[styles.chipText, model === 'full' ? styles.chipTextActive : null]}>
                 Full
+              </Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.label}>Delegate</Text>
+          <View style={styles.row}>
+            <Pressable
+              onPress={() => setDelegate('cpu')}
+              style={[styles.chip, delegate === 'cpu' ? styles.chipActive : null]}
+            >
+              <Text style={[styles.chipText, delegate === 'cpu' ? styles.chipTextActive : null]}>
+                CPU
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setDelegate('gpu')}
+              style={[styles.chip, delegate === 'gpu' ? styles.chipActive : null]}
+            >
+              <Text style={[styles.chipText, delegate === 'gpu' ? styles.chipTextActive : null]}>
+                GPU
               </Text>
             </Pressable>
           </View>
@@ -321,7 +360,7 @@ function App(): React.JSX.Element {
           {configError ? <Text style={styles.errorText}>{configError}</Text> : null}
         </View>
 
-        {/* NATIVE VIEW */}
+        {/* NATIVE VIEW — works in both IMAGE and LIVE_STREAM mode */}
         <PoseLandmarksView
           key={viewKey}
           hybridRef={handleHybridRef}
@@ -332,6 +371,7 @@ function App(): React.JSX.Element {
           landmarkColor={landmarkColor}
           minVisibilityConfidence={appliedConfig.minVisibility}
           modelSelection={appliedConfig.model === 'lite' ? MODEL_LITE : MODEL_FULL}
+          delegateSelection={appliedConfig.delegate === 'cpu' ? DELEGATE_CPU : DELEGATE_GPU}
           inferenceSampleRateHz={appliedConfig.sampleRate}
           enableVisibilityRecovery={appliedConfig.enableVisibilityRecovery}
           enableOneEuroFilter={appliedConfig.enableOneEuroFilter}
@@ -371,12 +411,27 @@ function App(): React.JSX.Element {
           </View>
 
           <View style={styles.metaBlock}>
+            <Text style={styles.metaLine}>Mode: LIVE_STREAM / {delegateLabel}</Text>
             <Text style={styles.metaLine}>Landmark points: {landmarksCount} / 33</Text>
             <Text style={styles.metaLine}>
               Inference: {latencyMs >= 0 ? `${latencyMs.toFixed(1)} ms` : '--'}
             </Text>
             <Text style={styles.metaLine}>Sample: {sampleLandmark}</Text>
           </View>
+        </View>
+
+        {/* RAW BUFFER VIEWER */}
+        <View style={styles.panel}>
+          <Text style={styles.sectionTitle}>Raw Buffer (getLandmarksBuffer)</Text>
+          <Text style={styles.configHint}>First 4 landmarks: x, y, z, v | x, y, z, v | ...</Text>
+          <View style={styles.bufferBlock}>
+            <Text style={styles.bufferText}>
+              {rawBufferPreview}
+            </Text>
+          </View>
+          <Text style={styles.bufferInfo}>
+            Buffer length: {landmarksCount > 0 ? landmarksCount * 4 : 0} values ({landmarksCount} landmarks × 4)
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -418,6 +473,7 @@ const styles = StyleSheet.create({
   configHint: {
     color: '#64748b',
     fontSize: 12,
+    marginTop: 4,
     marginBottom: 12,
   },
   label: {
@@ -517,6 +573,25 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     fontFamily: 'monospace',
     fontSize: 12,
+  },
+  bufferBlock: {
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: '#0b1327',
+    borderWidth: 1,
+    borderColor: '#253556',
+  },
+  bufferText: {
+    color: '#22d3ee',
+    fontFamily: 'monospace',
+    fontSize: 11,
+    lineHeight: 18,
+  },
+  bufferInfo: {
+    marginTop: 8,
+    color: '#64748b',
+    fontSize: 11,
+    fontFamily: 'monospace',
   },
 })
 
