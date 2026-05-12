@@ -202,8 +202,8 @@ private fun applyProcessingConfig(
                     imageProxy.close()
                     if (bitmap == null) return@setAnalyzer
 
-                    // CameraX rotationDegrees is CLOCKWISE; MediaPipe expects COUNTER-CLOCKWISE
-                    val mpRotation = (360 - rotationDegrees) % 360
+                    // CameraX rotationDegrees is CLOCKWISE, same as MediaPipe's ImageProcessingOptions
+                    val mpRotation = rotationDegrees
                     inferenceTimestamps[timestampMs] = SystemClock.uptimeMillis()
                     poseLandmarkerHelper?.detectAsync(bitmap, timestampMs, mpRotation)
                     bitmap.recycle()
@@ -390,8 +390,8 @@ private fun applyProcessingConfig(
                 val visibility = DoubleArray(firstPose.size)
                 for (i in firstPose.indices) {
                     val lm = firstPose[i]
-                    rawCoords[i * 3] = (1 - lm.x()).toDouble()
-                    rawCoords[i * 3 + 1] = lm.y().toDouble()
+                    rawCoords[i * 3] = (1 - lm.y()).toDouble()
+                    rawCoords[i * 3 + 1] = (1 - lm.x()).toDouble()
                     rawCoords[i * 3 + 2] = lm.z().toDouble()
                     visibility[i] = if (lm.visibility().isPresent) lm.visibility().get().toDouble() else 1.0
                 }
